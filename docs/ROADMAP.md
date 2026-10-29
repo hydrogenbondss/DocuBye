@@ -25,7 +25,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Add safe pauses for simulated human verification and unexpected requests.
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
-- [x] Add a browser test suite for external requests, redirects, popups, frames, altered form actions/payloads, and duplicate submission attempts.
+- [x] Add a browser test suite for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, and duplicate submission attempts.
 - [ ] Verify the expanded browser suite in GitHub Actions before proceeding to a real-site adapter.
 - [ ] Conduct a broader security review for downloads, browser protocols, and remaining navigation edge cases.
 

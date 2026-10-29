@@ -160,11 +160,19 @@ class MockRemovalAgent:
 
             route.continue_()
 
+        def block_websocket(websocket_route) -> None:
+            parsed_socket = urlsplit(websocket_route.url)
+            host = parsed_socket.hostname or "<invalid-url>"
+            blocked_hosts.append(host)
+            blocked_requests.append(f"WEBSOCKET {host}"[:160])
+            websocket_route.close(code=1008, reason="Blocked by DocuBye synthetic-only guard")
+
         with sync_playwright() as playwright:
             executable_path = os.getenv("DOCUBYE_CHROMIUM_EXECUTABLE") or None
             browser = playwright.chromium.launch(headless=self.headless, executable_path=executable_path)
             context = browser.new_context(service_workers="block")
             context.route("**/*", guard)
+            context.route_web_socket("**/*", block_websocket)
             page = context.new_page()
             page.set_default_timeout(5_000)
             try:

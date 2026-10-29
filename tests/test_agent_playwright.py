@@ -71,7 +71,7 @@ def test_human_or_out_of_scope_steps_pause_before_submission(scenario):
         assert state.submission_count == 0
 
 
-@pytest.mark.parametrize("scenario", ["external-request", "external-redirect", "external-popup", "external-frame"])
+@pytest.mark.parametrize("scenario", ["external-request", "external-redirect", "external-popup", "external-frame", "external-websocket"])
 def test_external_navigation_paths_are_blocked_and_require_review(scenario):
     with running_mock_site(scenario) as (base_url, state):
         result = run_if_browser_available(base_url, SyntheticProfile(), lambda review: True)

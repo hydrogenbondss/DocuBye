@@ -89,6 +89,11 @@ class _Handler(BaseHTTPRequestHandler):
                     "</body>",
                     '<iframe src="https://example.com/docubye-frame" title="unexpected frame"></iframe></body>',
                 )
+            elif scenario == "external-websocket":
+                body = OPT_OUT_HTML.replace(
+                    "</body>",
+                    '<script>new WebSocket("wss://example.com/docubye-test-socket");</script></body>',
+                )
             elif scenario == "bad-form-action":
                 body = OPT_OUT_HTML.replace('action="/submit"', 'action="/unexpected-submit"')
             elif scenario == "mutate-before-submit":
@@ -149,7 +154,7 @@ class _MockHTTPServer(ThreadingHTTPServer):
 def running_mock_site(scenario: str = "normal"):
     allowed = {
         "normal", "challenge", "unexpected", "verified", "early-submit",
-        "external-request", "external-redirect", "external-popup", "external-frame",
+        "external-request", "external-redirect", "external-popup", "external-frame", "external-websocket",
         "bad-form-action", "mutate-before-submit", "duplicate-after-submit",
     }
     if scenario not in allowed:
