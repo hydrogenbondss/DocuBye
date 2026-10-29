@@ -60,7 +60,8 @@ def test_inspector_selects_only_visible_exact_labels_and_never_reads_values():
         assert _click_unique_visible_text(page, "Address, phone number, and/or e-mail address") is True
         assert page.locator("#contact-info").is_checked()
         fields, buttons = _visible_field_metadata(page)
-        assert {field.name for field in fields} >= {"personal", "contact-info", "contact_email", "content_url"}
+        assert {field.element_id for field in fields} >= {"personal", "contact-info", "email", "url"}
+        assert {field.name for field in fields} >= {"kind", "info", "contact_email", "content_url"}
         assert buttons == ["Next", "Submit"]
         assert all(not hasattr(field, "value") for field in fields)
         assert "not-for-logging@example.test" not in repr(fields)
