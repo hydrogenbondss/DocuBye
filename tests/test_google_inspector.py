@@ -82,3 +82,38 @@ def test_inspector_refuses_ambiguous_visible_label():
         page.set_content("<button>Continue</button><a href='#'>Continue</a>")
         assert _click_unique_visible_text(page, "Continue") is False
         browser.close()
+
+
+def test_inspector_stops_before_branch_selection_when_captcha_is_visible():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _click_unique_visible_text, _verification_challenge_visible
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(
+            '<label><input id="personal" type="radio">Content contains your personal information</label>'
+            '<iframe title="reCAPTCHA" src="https://www.google.com/recaptcha/api2/anchor" '
+            'width="304" height="78"></iframe>'
+        )
+        assert _verification_challenge_visible(page) is True
+        # The inspector must stop rather than making even the preliminary choice.
+        assert _click_unique_visible_text(page, "Content contains your personal information") is False
+        assert page.locator("#personal").is_checked() is False
+        browser.close()
+
+
+def test_inspector_does_not_treat_hidden_captcha_as_visible_challenge():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _verification_challenge_visible
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(
+            '<div class="g-recaptcha" style="display:none" data-sitekey="synthetic"></div>'
+        )
+        assert _verification_challenge_visible(page) is False
+        browser.close()

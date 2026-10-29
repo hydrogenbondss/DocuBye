@@ -49,6 +49,7 @@ class InspectionReport:
     visible_buttons: list[str] = field(default_factory=list)
     blocked_hosts: list[str] = field(default_factory=list)
     blocked_requests: list[dict[str, str]] = field(default_factory=list)
+    verification_challenge_detected: bool = False
     submitted: bool = False
     filled_fields: bool = False
     notes: list[str] = field(default_factory=list)
@@ -70,6 +71,21 @@ def inspection_request_allowed(url: str, method: str) -> bool:
 def websocket_inspection_allowed(_url: str) -> bool:
     """The inspector never opens or forwards WebSocket connections."""
     return False
+
+
+def _verification_challenge_visible(page) -> bool:
+    """Return true when a visible CAPTCHA/human-verification element is present."""
+    return bool(page.locator(
+        'iframe[src*="recaptcha"], iframe[title*="challenge" i], '
+        '.g-recaptcha, [data-sitekey], [id*="captcha" i], [class*="captcha" i]'
+    ).evaluate_all(
+        """elements => elements.some(el => {
+            const style = getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            return !el.hidden && style.display !== 'none' && style.visibility !== 'hidden'
+                && rect.width > 0 && rect.height > 0;
+        })"""
+    ))
 
 
 def _click_unique_visible_text(page, label: str) -> bool:
@@ -185,6 +201,17 @@ def inspect_google_contact_form(*, headless: bool = True) -> InspectionReport:
             parsed_final = urlsplit(page.url)
             if parsed_final.scheme != "https" or parsed_final.hostname != "support.google.com":
                 report.notes.append("The page did not remain on the expected official support.google.com host.")
+                return report
+
+            # CAPTCHA is a hard handoff. Do not interact with the form wizard
+            # if verification is already visible, even to select a branch.
+            if _verification_challenge_visible(page):
+                report.verification_challenge_detected = True
+                report.visible_fields, report.visible_buttons = _visible_field_metadata(page)
+                report.notes.append(
+                    "CAPTCHA/human verification was visible before branch selection. "
+                    "Stopped without interacting further; a person must take over."
+                )
                 return report
 
             first_branch = "Content contains your personal information"

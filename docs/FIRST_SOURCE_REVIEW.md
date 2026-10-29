@@ -9,6 +9,14 @@
 - Google Help: https://support.google.com/websearch/answer/9673730?hl=en
 - Help for finding and removing personal contact information: https://support.google.com/websearch/answer/12719076?hl=en
 
+## Result of live non-submitting inspection (30 October 2026)
+
+The official form was opened in a fresh, unauthenticated browser context. The visible top-level controls were: the radio choices for “Content contains nudity or sexual material,” “Content contains your personal information,” “Content is on a site with exploitative removal practices,” and “Content shows a person under 18”; a required country-of-residence dropdown (showing United States by default); a reCAPTCHA element; and a Next button.
+
+The “Content contains your personal information” radio was selected during the inspection. The expected “Address, phone number, and/or e-mail address” choice did **not** become visible at that stage. The Next button was not clicked, no personal values were entered, no account sign-in was used, and nothing was submitted. Because a CAPTCHA was visible before the next step, DocuBye will not advance automatically or attempt to bypass it.
+
+**Conclusion:** the active sub-branch and its required fields remain unverified. The earlier request contract is a provisional data model based on public Help text and the form document, not a selector map for the live UI. No real-source adapter should be implemented until a person can safely take over the verification step, without entering personal data or submitting a request.
+
 ## What the official form currently shows
 
 The public form starts by asking what kind of personal-content removal is requested and the country of residence. Within the personal-information path, it offers a narrow option for **address, phone number, and/or email address**; other options include government IDs, bank/credit-card details, official records, login credentials, and other personal information. DocuBye must not allow the model to choose a broader category.

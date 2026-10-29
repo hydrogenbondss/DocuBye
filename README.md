@@ -58,7 +58,7 @@ After installing the package and Playwright Chromium, run:
 
     docubye-inspect-google-form
 
-This opens a fresh browser context, selects only the public Google Search contact-info branch, and prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET request, unapproved hosts, and WebSockets. The command is a diagnostic aid; if the form cannot be inspected without an unsupported step, it reports that rather than proceeding.
+This opens a fresh browser context and prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET request, unapproved hosts, and WebSockets. If a CAPTCHA or human-verification element is visible, it stops before selecting any branch and reports a human handoff. The first live inspection found a CAPTCHA before the Next step, so the contact-info sub-branch has not yet been verified.
 
 ## First real-source candidate
 

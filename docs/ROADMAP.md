@@ -27,7 +27,8 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
 - [x] Add browser tests for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, duplicate submission attempts, and approval states.
-- [x] Verify the full suite in GitHub Actions: 61 tests passed, including read-only inspector and approval-token regression tests.
+- [x] Verify the full suite in GitHub Actions: 61 tests passed on the code revision before this conservative CAPTCHA-stop change.
+- [ ] Re-run CI after adding the CAPTCHA-detection and handoff regression tests.
 - [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
 **Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
@@ -38,8 +39,9 @@ Candidate: Google's official personal-contact-information Search-removal flow. T
 
 - [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
 - [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
-- [x] Add a read-only local inspector command that selects the contact-info branch and records visible field metadata without filling or submitting.
-- [ ] Run the inspector locally and inspect the active contact-info branch without personal data or submission.
+- [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
+- [x] Run a fresh unauthenticated, non-submitting inspection of the public form: a CAPTCHA was visible before the Next step, so the active contact-info branch remains unverified.
+- [ ] Find a safe human-handoff path to inspect the active branch without bypassing CAPTCHA or sending a removal request.
 - [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
 - [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
 - [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.
