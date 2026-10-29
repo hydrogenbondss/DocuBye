@@ -172,7 +172,7 @@ class MockRemovalAgent:
             browser = playwright.chromium.launch(headless=self.headless, executable_path=executable_path)
             context = browser.new_context(service_workers="block")
             context.route("**/*", guard)
-            context.route_web_socket("**/*", block_websocket)
+            context.route_web_socket(lambda url: True, block_websocket)
             page = context.new_page()
             page.set_default_timeout(5_000)
             try:
