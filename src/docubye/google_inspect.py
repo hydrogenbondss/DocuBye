@@ -87,6 +87,10 @@ def _verification_challenge_visible(page) -> bool:
         })"""
     ))
 
+def _safe_to_inspect_without_handoff(page) -> bool:
+    """The form wizard must stop before interaction if verification is visible."""
+    return not _verification_challenge_visible(page)
+
 
 def _click_unique_visible_text(page, label: str) -> bool:
     matches = page.get_by_text(label, exact=True)
@@ -205,7 +209,7 @@ def inspect_google_contact_form(*, headless: bool = True) -> InspectionReport:
 
             # CAPTCHA is a hard handoff. Do not interact with the form wizard
             # if verification is already visible, even to select a branch.
-            if _verification_challenge_visible(page):
+            if not _safe_to_inspect_without_handoff(page):
                 report.verification_challenge_detected = True
                 report.visible_fields, report.visible_buttons = _visible_field_metadata(page)
                 report.notes.append(
