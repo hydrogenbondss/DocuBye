@@ -1,71 +1,53 @@
 # Architecture proposal
 
-**Status:** Proposed starting point. Validate with a small proof of concept before locking major dependencies.
+**Status:** Initial architecture implemented for the synthetic milestone; review remaining before any live integration.
 
 ## Design goal
 
 Make browser automation reliable enough for privacy-sensitive workflows without giving a general-purpose model unlimited authority over the user's browser, data, or identity.
 
-## Proposed components
+## Current components
 
-### 1. User interface
+### 1. Workflow controller
 
-Start with a local application that lets the user define a task, inspect the intended request, approve it, follow the agent's progress, and take over when required. A polished multi-account cloud service is not part of the MVP.
+The agent module owns the permitted workflow. It validates the loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. The model does not decide whether the submission gate is open.
 
-### 2. Task orchestrator
+### 2. Browser driver and network guard
 
-A small, explicit state machine should own the workflow. It decides which actions are permitted, tracks state, prevents duplicate submissions, and provides a resumable pause for human intervention. The language model proposes or performs bounded actions; it does not own the permission model.
+Playwright controls the browser. A context-level route handler permits only requests to the exact mock-site origin, and rejects POSTs to /submit until approval is given. Service workers are blocked for the prototype. The base URL must be plain HTTP on a loopback host and cannot include a path, query, or fragment.
 
-### 3. Browser driver
+The guard is intended for this local fixture. Do not treat it as a completed production-grade browser sandbox: live-site integrations require a separate security review, more comprehensive navigation controls, and tests around redirects, popups, frames, downloads, browser protocols, and page-initiated network paths.
 
-Use Playwright for controlled browser interaction, test fixtures, deterministic locators, screenshots, and assertions. Evaluate the open-source Browser Use agent library as an optional navigation layer for unfamiliar or variable pages. Keep the browser-agent interface replaceable so the product is not locked to one model or hosted browser service.
+### 3. Form planner
 
-Recommended approach: deterministic site-specific steps wherever the workflow is known; AI-guided exploration only where variation makes fixed steps insufficient. Don't ask an LLM to rediscover a stable form from scratch on every run.
+The planner module defines a protocol, an offline deterministic mapping, and an optional OpenAI Responses API mapper. The model receives only field metadata (name, label, input type, and required flag), never the profile's name, email, phone, cookies, or credentials. Model output is parsed and validated against an allowlist of input names and canonical profile fields.
 
-### 4. Source adapter registry
+AI is deliberately constrained to mapping fields in this milestone. It does not have arbitrary browser tools, cannot choose a destination, and cannot approve a submission. A future AI-navigation layer must remain behind an independently enforced navigation boundary.
 
-Each supported source should declare, in version-controlled code or data:
+### 4. Synthetic mock site
 
-- Source name and official domain(s).
-- Official removal workflow and documentation URLs.
-- Information fields required and why they are required.
-- Supported jurisdictions or eligibility caveats, if known.
-- Steps the agent may perform.
-- Mandatory human checkpoints.
-- Confirmation and verification method.
-- Retry and duplicate-submission policy.
-- Known limitations, last-tested date, and integration tests.
+The mock-site module serves a local test fixture with the form, a human-verification pause, an unexpected-request pause, and a separate verification endpoint. The special early-submit scenario attempts a POST before review to test the route guard. Test-only form values remain in volatile fixture memory and are not written to logs or disk.
 
-Adapters must be narrowly scoped. The agent must not follow a redirect to an unrelated domain and continue sending personal data without reassessing the destination.
+### 5. Task state and evidence
 
-### 5. Local state and evidence
+The models module implements a typed state machine and a one-time submission-attempt guard. Public task records contain timestamps, generic action descriptions, status, and a task ID—not profile values or full page content. The verified-removed state is only reached when the fixture's separate verification endpoint confirms removal.
 
-Use SQLite for task metadata in the MVP. Avoid persisting raw personal fields by default. Store secrets in the operating system's secure credential store if persistence is later needed. Evidence should be minimal and redacted: timestamps, source, action taken, status, and a confirmation reference where appropriate—not full page dumps or session cookies.
+## Proposed tools
 
-SQLite by itself is not encryption. Do not describe the database as encrypted unless an encryption layer is implemented and tested.
+- Python 3.11+
+- Playwright for browser control and end-to-end testing
+- pytest for workflow and safety tests
+- SQLite later, once task records need persistence; current task state is in memory
+- Optional OpenAI SDK for model-assisted field mapping
 
-### 6. Model provider interface
+## Why not delegate the browser boundary to an AI-agent library yet?
 
-Keep the model provider configurable. Local inference can improve privacy but may reduce capability or require substantial hardware. Hosted models can improve task performance but may receive page text and the minimum personal information included in prompts. Make this data flow visible and configurable; do not silently send all page content or the full identity profile.
-
-### 7. Tests and development tooling
-
-Initial recommendation:
-
-- Python 3.12+ for the orchestrator and Browser Use evaluation.
-- Playwright for browser control and end-to-end test coverage.
-- Pydantic-style schemas (or equivalent typed models) for task data and adapter contracts.
-- SQLite for local task metadata.
-- pytest for state machine, adapter, and browser workflow tests.
-- uv for Python dependency and environment management.
-- A local mock opt-out site with synthetic data for all initial end-to-end tests.
-
-Confirm the exact tool versions and package APIs at implementation time. Avoid adding a frontend framework, cloud database, queue service, or container orchestration before a working vertical slice needs it.
+The first prototype should not rely on a library's allowed-domains option as the sole security barrier. Browser-agent domain-restriction bypass concerns have been reported, including a recent report in the Browser Use project: https://github.com/browser-use/browser-use/issues/5815. This is not a conclusion that the library can never be used; DocuBye should independently prove and enforce its network boundary before handing browser control to a more general agent. Reconsider after the synthetic tests and a targeted security review.
 
 ## Critical safety controls
 
 - Explicit task scope and user authorisation.
-- Approval gate before external submission in the MVP.
+- Approval gate before submission.
 - Stop on CAPTCHA, identity verification, login challenge, payment, legal attestation, unclear consent, or unexpected data requests.
 - Treat webpage content as untrusted; resist prompt injection.
 - Never extract or expose passwords, cookies, authentication tokens, or unrelated page data to the model.
@@ -73,6 +55,10 @@ Confirm the exact tool versions and package APIs at implementation time. Avoid a
 - Prevent duplicate submission after a timeout or resume.
 - Do not evade a website's security controls or claim an unverified removal.
 
-## Architecture decision to validate first
+## Before connecting to a real source
 
-Run one synthetic workflow through Playwright, then compare adding Browser Use for the uncertain navigation step. Choose the smallest configuration that is sufficiently robust, observable, and privacy-preserving. Do not adopt hosted browser infrastructure for the initial proof of concept.
+1. Verify the CI browser suite is green with Playwright-managed Chromium.
+2. Add security tests for redirects, popup tabs, frames, browser protocols, and attempts to alter the request destination.
+3. Pick one official removal workflow and document its required fields, terms, verification method, and human checkpoints.
+4. Add a source-specific adapter and avoid arbitrary model-generated clicks for submission.
+5. Keep pre-submission review and explicit approval enabled until the integration has adequate safety evidence.
