@@ -21,7 +21,7 @@ Playwright controls the browser. A context-level route handler:
 - Requires the approved POST to be a main-frame document navigation.
 - Compares the outgoing form payload against the exact in-memory payload shown for review.
 - Consumes the approval before forwarding the first permitted submission, so a later request cannot reuse it.
-- Blocks service workers and routes WebSocket connections to a closed, non-forwarding handler.
+- Blocks service workers and routes WebSocket connections to a non-forwarding mock handler.
 
 The guard is intended for a controlled local fixture. It is not a production-grade browser sandbox. Live-site integrations require a separate security review, more comprehensive navigation controls, and tests around downloads, browser protocols, and remaining navigation edge cases.
 

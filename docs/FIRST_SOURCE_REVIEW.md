@@ -39,7 +39,7 @@ Google Help documents a separate “Results about you” experience for monitori
 
 ## Request contract added to DocuBye
 
-The module src/docubye/sources/google_search_contact.py contains a pure request draft/review contract for the narrow contact-info workflow. It does not drive a browser and cannot submit a request. The command docubye-inspect-google-form is a separate read-only inspector: it can select the visible branch and collect field metadata, but blocks non-GET requests and does not fill or submit anything.
+The module src/docubye/sources/google_search_contact.py contains a pure request draft/review contract for the narrow contact-info workflow. It does not drive a browser and cannot submit a request. The command docubye-inspect-google-form is a separate read-only inspector: it collects visible field metadata, but stops before branch selection if a visible CAPTCHA/human-verification element is present. It blocks non-GET requests and does not fill or submit anything.
 
 The contract validates:
 - One supported contact-info category and the exact exposed value.
