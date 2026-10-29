@@ -161,6 +161,9 @@ class GoogleContactApproval:
         """Call immediately before submission; a failed or completed attempt cannot reuse approval."""
         if self._consumed:
             raise PermissionError("This Google request approval has already been used")
+        # Consume first: even a malformed/mismatched attempt must not leave this
+        # approval reusable for a later request.
+        self._consumed = True
         if not (
             self.accuracy_confirmed
             and self.authority_confirmed
@@ -170,7 +173,6 @@ class GoogleContactApproval:
         draft.validate()
         if draft.fingerprint() != self.request_fingerprint:
             raise PermissionError("The request changed after review; a fresh approval is required")
-        self._consumed = True
 
 
 def approve_google_review(

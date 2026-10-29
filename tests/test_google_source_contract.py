@@ -106,7 +106,8 @@ def test_approval_is_bound_to_exact_payload_and_can_only_be_used_once():
     with pytest.raises(PermissionError, match="changed after review"):
         approval.consume_once(changed)
 
-    approval.consume_once(draft)
+    # A failed first attempt consumes the approval; it cannot be reused even
+    # when the caller later supplies the original, previously reviewed draft.
     with pytest.raises(PermissionError, match="already been used"):
         approval.consume_once(draft)
 

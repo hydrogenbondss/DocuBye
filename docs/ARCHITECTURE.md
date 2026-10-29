@@ -39,6 +39,12 @@ The mock-site module serves the form and scenarios for human verification, unexp
 
 The models module implements a typed state machine and a one-time submission-attempt guard. Public task records contain timestamps, generic action descriptions, status, and a task ID—not profile values or full page content. The verified-removed state is only reached when the fixture's separate verification endpoint confirms removal.
 
+### 6. Google contact-info request contract and inspector
+
+The source module validates a draft for the limited address/phone/email Search-removal branch and prepares a full user review plus a redacted audit record. Its approval token is bound to the request fingerprint and is consumed on the first attempt, including a mismatch. It still does not submit a request or establish that Google's dynamic form has been mapped.
+
+The docubye-inspect-google-form command is a separate read-only diagnostic: it uses a fresh browser context, selects the public contact-info branch, enumerates visible field labels/attributes without input values, blocks non-GET requests and unapproved hosts, and never opens WebSockets or clicks Next/Submit. Its interactive run is still required before any live adapter.
+
 ## Proposed tools
 
 - Python 3.11+

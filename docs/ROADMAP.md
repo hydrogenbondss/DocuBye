@@ -27,7 +27,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
 - [x] Add browser tests for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, duplicate submission attempts, and approval states.
-- [x] Verify the full suite in GitHub Actions: 28 tests passed.
+- [x] Verify the full suite in GitHub Actions: 61 tests passed on the current inspector revision; approval-token hardening is being re-run in CI.
 - [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
 **Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
