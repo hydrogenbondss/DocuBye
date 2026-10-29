@@ -1,6 +1,6 @@
-# First-source review: Google Search personal-information removal
+# First-source review: Google Search personal contact information
 
-**Status:** Candidate selected for the next milestone; not yet implemented or live-tested by DocuBye.  
+**Status:** Research and request-contract preparation only; no live browser adapter or submission path exists.  
 **Source type:** Search-result removal, not removal from the website hosting the content.
 
 ## Official entry points
@@ -9,49 +9,53 @@
 - Google Help: https://support.google.com/websearch/answer/9673730?hl=en
 - Help for finding and removing personal contact information: https://support.google.com/websearch/answer/12719076?hl=en
 
-## Why this is a reasonable first real-source candidate
+## What the official form currently shows
 
-Google provides an official public form for reporting personal information that appears in Google Search. The documented form asks the reporter to choose the type of removal request and country of residence. The personal-information branch covers address, phone number, email address, government IDs, financial account details, and other sensitive categories. Google requires the specific content URL(s); additional details and contact information are used to assess the report and provide updates.
+The public form starts by asking what kind of personal-content removal is requested and the country of residence. Within the personal-information path, it offers a narrow option for **address, phone number, and/or email address**; other options include government IDs, bank/credit-card details, official records, login credentials, and other personal information. DocuBye must not allow the model to choose a broader category.
 
-For DocuBye's first real-source adapter, restrict scope to **a user's own address, phone number, or email address appearing in a supplied page URL**. Do not start with government IDs, bank/card numbers, login credentials, medical records, intimate imagery, minors, legal claims, or exploitative-removal claims. Those branches need different policy and data-handling review.
+The form text currently exposes fields for the exact contact value as shown on the page, source content URL(s), Google Search results page URL(s), search terms, additional context, and a final accuracy/authority attestation. It also contains country and contact-information prompts. The public help says Google needs context and contact information and may preserve content considered to be in the public interest.
+
+**Inspection limitation:** This was a non-submitting inspection of the public page text. The page includes multiple conditional report branches in the same document, so this does not prove which fields are visible or required after the contact-info branch is selected. An interactive, non-submitting inspection of the active branch is still required before implementing selectors or enabling an adapter. Do not infer visible form state from the full document text.
+
+## Narrow intended scope
+
+Support only a user's own address, phone number, or email address appearing at URLs they supply or confirm. Do not start with government IDs, bank/card numbers, credentials, medical records, intimate imagery, minors, legal claims, exploitative-removal claims, or other categories. These require separate risk and policy reviews.
+
+The selected category and value must come from the user, not model inference. Google says to enter the contact information as it appears on the page; the form also requests specific content URL(s) and Google Search results page URL(s). Search terms and additional context may be requested. The final accuracy/authority statement is a human attestation and must never be completed or asserted by the model on the user's behalf.
 
 ## What this workflow does and does not do
 
-Google may remove a URL fully or partially from Google Search after reviewing a request. That does **not** delete the content from the original website, other search engines, copied pages, or archives. Google may reject content that it considers important or newsworthy. DocuBye must report Google’s decision separately from independently checking whether the result has disappeared.
+This is a request to delist a Google Search result. It does **not** delete the original page or remove the information from other search engines, copies, archives, or other sites. Google reviews requests and may approve, deny, or partially limit removal where public-interest considerations apply.
 
-Official Help says the request needs the URL of the page containing the information, and only the URLs supplied are reviewed. It also notes that some removals may be partial and the original page can remain available elsewhere.
+Google Help documents a separate “Results about you” experience for monitoring home-address, phone, and email matches; availability varies by market, and the account-based flow requires sign-in. DocuBye should not assume that the public form and the account-based flow are interchangeable.
 
-## Proposed data contract
+## Request contract added to DocuBye
 
-Required from the user for this narrow adapter:
+The module src/docubye/sources/google_search_contact.py contains a pure request draft/review contract for the narrow contact-info workflow. It does not drive a browser and cannot submit a request.
 
-- One or more exact page URLs supplied or confirmed by the user.
-- Which exposed contact-info category is present: address, phone, or email.
-- The exact exposed value needed by Google's form.
-- Country of residence, if required by the live form.
-- A contact email if the user wants status updates and the form requires it.
+The contract validates:
+- One supported contact-info category and the exact exposed value.
+- One or more source page URLs.
+- One or more Google Search results URLs and search terms.
+- Country of residence and a contact email for the draft.
+- No embedded URL credentials, local hostnames, private/reserved IPs, or out-of-scope categories.
+- A redacted operational record that excludes raw values, URLs, email addresses, and search terms.
+- An approval object bound to the exact request fingerprint, requiring separate affirmative accuracy, authority, and search-delisting acknowledgements; the approval can only be consumed once.
 
-Do not ask DocuBye's AI model to infer or reconstruct a user's private values from pages. The agent should use values the user explicitly provided or reviewed. No identity document or unrelated sensitive field should be requested for this narrow path.
+These checks validate request structure; they do **not** determine legal eligibility, prove that a removal request should be granted, or confirm that the live form's exact field requirements have been mapped.
 
-## Proposed browser workflow
+## Next steps before a real adapter
 
-1. Open only the verified official Google form.
-2. Confirm that the displayed workflow is the expected personal-information branch. If the form differs, pause rather than guessing.
-3. Use Playwright to navigate the form and fill supported fields. AI may assist in interpreting labels, but it must not choose the user's policy category, invent data, or decide the request is legally eligible.
-4. Display a final review containing the Google destination, supplied URLs, contact-info category, and categories of data to be sent. Do not expose full values to ordinary logs.
-5. Submit only after the user explicitly approves the exact request. Any CAPTCHA, account challenge, identity check, unexpected disclosure, or policy attestation pauses for human intervention.
-6. Capture a minimal receipt/status reference. Do not call the request removed until Google's decision and a suitable verification step support that status.
+1. Run a non-submitting interactive inspection of the active contact-info branch on the official form, with no real profile loaded.
+2. Record the exact visible required fields, their stable labels/attributes, whether any account login is needed, and all branch decisions.
+3. Build deterministic, source-specific field filling; keep actual values out of model prompts and ordinary logs.
+4. Present the full destination, category, exposed value, source URLs, Search result URLs, terms, country, contact channel, and any context/screenshot that will be sent for human review.
+5. Require a fresh explicit approval tied to that exact review; pause on any CAPTCHA, login, identity check, new declaration, changed destination, or unrecognised field.
+6. Keep automated tests synthetic and non-submitting. No live requests in CI.
+7. After a user-authorised live submission, record receipt separately from Google's decision and separately verify whether the Search result actually disappeared.
 
-## Tests required before release
+## Sources checked
 
-- Mirror the narrow form branch with synthetic data and test field mapping and the approval gate.
-- Verify redirects and new windows remain within the exact approved Google form workflow.
-- Ensure request URLs and field values match the review snapshot.
-- Test rejection, timeout, interrupted submission, duplicate-submit prevention, and resume behavior.
-- Test that the agent pauses if Google changes form layout, required fields, terms, or destination.
-- Verify that logs and screenshots redact personal values.
-- Conduct a non-submitting browser inspection of the live official form before enabling a real-source adapter. Never run that inspection with a real user profile or submit any form as part of automated tests.
-
-## Source notes
-
-This review is based on the linked official Google form and Help Center pages checked on 30 October 2026. The form is dynamic and may change; verify the live page again during implementation.
+- Google's [official personal-content removal form](https://support.google.com/websearch/contact/content_removal_form?hl=en), inspected 30 October 2026.
+- Google's [personal-info Search-removal guidance](https://support.google.com/websearch/answer/12719076?hl=en), inspected 30 October 2026.
+- Google's [general removal guidance](https://support.google.com/websearch/answer/9673730?hl=en), inspected 30 October 2026.

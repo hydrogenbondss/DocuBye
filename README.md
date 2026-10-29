@@ -4,18 +4,19 @@
 
 DocuBye aims to do more than list privacy risks or generate opt-out instructions. It is being designed to carry out authorised removal workflows in a real browser, handle routine steps automatically, ask for help when a site requires human judgement, and keep an honest record of what happened.
 
-> **Project status: early prototype.** The current implementation is a local synthetic-site workflow. It does not yet connect to real data brokers or accept real personal information. The optional AI planner maps field labels; Playwright controls the browser and enforces the local-only boundary and approval gate.
+> **Project status: early prototype.** The current runnable workflow uses a local synthetic site only. It does not yet connect to real data brokers or submit real removal requests.
 
 ## Current prototype
 
 - Local mock opt-out site with synthetic data.
 - Playwright-controlled navigation and field filling.
 - Optional OpenAI-backed field mapping that receives only form metadata, not profile values.
-- Request review and explicit approval before submission.
-- Route guard blocks non-loopback navigation and any form submission before approval.
-- Human handoff for verification challenges, unexpected fields, and out-of-scope requests.
-- A state machine that distinguishes a submitted request from a verified removal.
-- Test scenarios for an attempted pre-approval submission, a human-verification screen, an unexpected request, and a simulated successful verification.
+- Explicit request review and approval before synthetic submission.
+- Guards for the exact local origin, expected endpoints, reviewed form payload, and one-time approval.
+- Blocks external HTTP paths and WebSockets during the synthetic workflow.
+- Human handoff for verification challenges and unexpected requests.
+- A state machine that distinguishes submission from a separately verified result.
+- 28 passing tests in the latest recorded GitHub Actions run.
 
 ## Quick start
 
@@ -38,11 +39,11 @@ The CLI displays the destination and data categories, then asks you to explicitl
     docubye --scenario early-submit
     docubye --scenario verified
 
-The early-submit scenario intentionally attempts a POST before the user has approved. The browser request guard should block it. The verified scenario is a simulated fixture response, not evidence about a real website.
+The early-submit scenario intentionally attempts a POST before approval. The browser request guard should block it. The verified scenario is a simulated fixture response, not evidence about a real website.
 
-### Optional AI field mapping
+## Optional AI field mapping
 
-The default rules planner is offline and deterministic. To exercise the optional model-assisted form-field mapping, install the extra and configure a provider explicitly:
+The default rules planner is offline and deterministic. To exercise optional model-assisted form-field mapping, install the extra and configure a provider explicitly:
 
     python -m pip install -e '.[ai]'
     export DOCUBYE_OPENAI_API_KEY='your-key'
@@ -51,30 +52,25 @@ The default rules planner is offline and deterministic. To exercise the optional
 
 The model receives only input names, field labels, types, and required flags. The profile's name, email, phone number, browser cookies, and credentials are not included in the model request. Remote inference is still a network call, so users should choose their provider deliberately.
 
-If DOCUBYE_CHROMIUM_EXECUTABLE is set, the runner uses that local Chromium binary. Otherwise, it uses Playwright's installed browser.
+## First real-source candidate
+
+The Google Search personal contact-info workflow is being investigated, not automated yet. Its current request contract and limitations are documented in docs/FIRST_SOURCE_REVIEW.md. Google Search removal does not delete the original website's content. The live form branch must be interactively inspected without personal data or submission before a browser adapter can be enabled.
 
 ## Principles
 
-- **The user owns the task.** Work only on the user's own information or information they are authorised to manage.
-- **Local-first.** Keep browser sessions and task records on the user's machine by default. Clearly disclose any data sent to a remote model or service.
-- **Human control without busywork.** The user authorises the scope; the agent handles routine steps within that scope and stops when the action falls outside it.
-- **Evidence over promises.** A request being submitted is not proof that information was deleted.
-- **No evasion.** Do not bypass CAPTCHAs, access controls, identity checks, or a site's explicit human-verification steps.
-- **Minimise sensitive data.** Do not log personal fields, cookies, credentials, or full page contents unnecessarily.
+- Work only on the user's own information or information they are authorised to manage.
+- Keep browser sessions and task records local by default.
+- Disclose remote model data flow.
+- Never bypass CAPTCHAs, access controls, identity checks, or a site's human-verification steps.
+- Keep personal fields out of ordinary logs, screenshots, and test reports.
+- Never label a request removed just because it was submitted.
 
 ## Documentation
 
 - Product brief: docs/PRODUCT_BRIEF.md
 - Architecture proposal: docs/ARCHITECTURE.md
 - Roadmap: docs/ROADMAP.md
-
-## What DocuBye cannot promise
-
-No tool can guarantee that every trace of a person will disappear from the internet. Some information cannot be removed, some sources have lawful retention requirements, and copies may persist outside the original site's control. DocuBye should report limitations plainly and never label a request removed without adequate verification.
-
-## Contributing
-
-The project is still an early prototype. Please open an issue before contributing a new integration or proposing a significant architectural change. Every integration should document the supported workflow, required data, verification method, failure states, and the last date it was tested.
+- First-source review: docs/FIRST_SOURCE_REVIEW.md
 
 ## Licence
 

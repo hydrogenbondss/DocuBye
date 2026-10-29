@@ -13,7 +13,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 
 ## Milestone 1 — Synthetic browser workflow
 
-**Status: implemented; expanded security regression tests in progress**
+**Status: implemented; CI browser suite passed**
 
 - [x] Create a local mock opt-out site using synthetic data.
 - [x] Add a typed task state machine and a one-time submission-attempt guard.
@@ -22,27 +22,31 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Limit the synthetic workflow to the exact local origin and a small endpoint/method allowlist.
 - [x] Require the single approved submission to be a main-frame document POST with a payload matching the reviewed form.
 - [x] Consume the one-time approval before forwarding the submission.
+- [x] Block outbound HTTP navigation paths and WebSockets in the synthetic browser.
 - [x] Add safe pauses for simulated human verification and unexpected requests.
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
-- [x] Add a browser test suite for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, and duplicate submission attempts.
-- [ ] Verify the expanded browser suite in GitHub Actions before proceeding to a real-site adapter.
-- [ ] Conduct a broader security review for downloads, browser protocols, and remaining navigation edge cases.
+- [x] Add browser tests for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, duplicate submission attempts, and approval states.
+- [x] Verify the full suite in GitHub Actions: 28 tests passed.
+- [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
 **Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
 
 ## Milestone 2 — First real source
 
-Candidate selected for investigation: Google's official personal-information removal form for Google Search. This is a search-result delisting workflow, not removal from the underlying website. See [first-source review](FIRST_SOURCE_REVIEW.md).
+Candidate: Google's official personal-contact-information Search-removal flow. This is request-contract preparation, not a working browser adapter. See [first-source review](FIRST_SOURCE_REVIEW.md) and [Issue #3](https://github.com/hydrogenbondss/DocuBye/issues/3).
 
-- [ ] Document the official flow, supported request categories, required URLs, contact information, jurisdiction caveats, and verification states.
-- [ ] Add a source adapter that only targets the verified official Google form domains.
-- [ ] Test the adapter without submitting any actual personal information.
-- [ ] Keep a pre-submission review of the destination and data categories.
-- [ ] Require explicit user authorisation before any real request is submitted.
-- [ ] Record only minimal evidence; distinguish request receipt, Google's decision, and actual search-result changes.
+- [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
+- [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
+- [ ] Inspect the active contact-info branch interactively, without personal data or submission.
+- [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
+- [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
+- [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.
+- [ ] Conduct a non-submitting smoke test against the live form without any real profile data.
+- [ ] Enable real submissions only after user review and explicit approval, outside automated tests.
+- [ ] Record request receipt, Google's decision, and observed Search result changes as separate states.
 
-**Exit criteria:** One official workflow is exercised with explicit authorisation, failures are handled safely, and the original source is clearly distinguished from Google Search results.
+**Exit criteria:** The live workflow is verified without submission first; any real submission requires exact user approval; the source adapter is narrow and tested; logs redact values; and no result is called removed without verification.
 
 ## Milestone 3 — Small reliable queue
 
