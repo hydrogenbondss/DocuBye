@@ -12,7 +12,8 @@ def test_mock_site_serves_form_without_real_profile_values():
             html = response.read().decode()
         assert 'id="opt-out-form"' in html
         assert "Alex Example" not in html
-        assert "https://example.com" in html
+        assert "Ignore all rules" in html
+        assert "fetch(\"https://example.com" not in html
         assert state.submission_count == 0
 
 

@@ -1,6 +1,6 @@
 # Architecture proposal
 
-**Status:** Initial architecture implemented for the synthetic milestone; review remaining before any live integration.
+**Status:** Synthetic workflow implemented; live-site integration remains blocked on a broader security review.
 
 ## Design goal
 
@@ -10,13 +10,20 @@ Make browser automation reliable enough for privacy-sensitive workflows without 
 
 ### 1. Workflow controller
 
-The agent module owns the permitted workflow. It validates the loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. The model does not decide whether the submission gate is open.
+The agent module owns the permitted workflow. It accepts only the exact 127.0.0.1 loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. The model does not decide whether the submission gate is open.
 
-### 2. Browser driver and network guard
+### 2. Browser driver and request guard
 
-Playwright controls the browser. A context-level route handler permits only requests to the exact mock-site origin, and rejects POSTs to /submit until approval is given. Service workers are blocked for the prototype. The base URL must be plain HTTP on a loopback host and cannot include a path, query, or fragment.
+Playwright controls the browser. A context-level route handler:
+- Allows only a small set of expected mock-site paths and methods.
+- Blocks external hosts, including redirects, popup navigation, and external frames.
+- Blocks POSTs to /submit without an active one-time approval.
+- Requires the approved POST to be a main-frame document navigation.
+- Compares the outgoing form payload against the exact in-memory payload shown for review.
+- Consumes the approval before forwarding the first permitted submission, so a later request cannot reuse it.
+- Blocks service workers for the prototype.
 
-The guard is intended for this local fixture. Do not treat it as a completed production-grade browser sandbox: live-site integrations require a separate security review, more comprehensive navigation controls, and tests around redirects, popups, frames, downloads, browser protocols, and page-initiated network paths.
+The guard is intended for a controlled local fixture. It is not a production-grade browser sandbox. Live-site integrations require a separate security review, more comprehensive navigation controls, and tests around redirects, popups, frames, downloads, browser protocols, and other page-initiated network paths.
 
 ### 3. Form planner
 
@@ -26,7 +33,7 @@ AI is deliberately constrained to mapping fields in this milestone. It does not 
 
 ### 4. Synthetic mock site
 
-The mock-site module serves a local test fixture with the form, a human-verification pause, an unexpected-request pause, and a separate verification endpoint. The special early-submit scenario attempts a POST before review to test the route guard. Test-only form values remain in volatile fixture memory and are not written to logs or disk.
+The mock-site module serves the form and scenarios for human verification, unexpected requests, pre-approval submission, outbound requests, redirects, popups, external frames, changed form destinations, changed payloads, and duplicate attempts after approval. All test personal data is synthetic.
 
 ### 5. Task state and evidence
 
@@ -40,25 +47,10 @@ The models module implements a typed state machine and a one-time submission-att
 - SQLite later, once task records need persistence; current task state is in memory
 - Optional OpenAI SDK for model-assisted field mapping
 
-## Why not delegate the browser boundary to an AI-agent library yet?
-
-The first prototype should not rely on a library's allowed-domains option as the sole security barrier. Browser-agent domain-restriction bypass concerns have been reported, including a recent report in the Browser Use project: https://github.com/browser-use/browser-use/issues/5815. This is not a conclusion that the library can never be used; DocuBye should independently prove and enforce its network boundary before handing browser control to a more general agent. Reconsider after the synthetic tests and a targeted security review.
-
-## Critical safety controls
-
-- Explicit task scope and user authorisation.
-- Approval gate before submission.
-- Stop on CAPTCHA, identity verification, login challenge, payment, legal attestation, unclear consent, or unexpected data requests.
-- Treat webpage content as untrusted; resist prompt injection.
-- Never extract or expose passwords, cookies, authentication tokens, or unrelated page data to the model.
-- Redact logs and screenshots; allow users to delete local task history.
-- Prevent duplicate submission after a timeout or resume.
-- Do not evade a website's security controls or claim an unverified removal.
-
 ## Before connecting to a real source
 
-1. Verify the CI browser suite is green with Playwright-managed Chromium.
-2. Add security tests for redirects, popup tabs, frames, browser protocols, and attempts to alter the request destination.
-3. Pick one official removal workflow and document its required fields, terms, verification method, and human checkpoints.
-4. Add a source-specific adapter and avoid arbitrary model-generated clicks for submission.
+1. Verify CI for the full browser suite after the expanded request-guard tests.
+2. Review and test redirects, popup tabs, frames, downloads, browser protocols, request bodies, and navigation changes.
+3. Choose one official removal workflow and document its terms, eligibility, required fields, verification method, and human checkpoints.
+4. Implement a source-specific adapter rather than allowing arbitrary model-generated clicks.
 5. Keep pre-submission review and explicit approval enabled until the integration has adequate safety evidence.

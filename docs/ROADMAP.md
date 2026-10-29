@@ -13,33 +13,36 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 
 ## Milestone 1 — Synthetic browser workflow
 
-**Status: implemented; GitHub Actions browser suite passed**
+**Status: implemented; expanded security regression tests in progress**
 
 - [x] Create a local mock opt-out site using synthetic data.
 - [x] Add a typed task state machine and a one-time submission-attempt guard.
 - [x] Implement Playwright navigation, field mapping, and review preparation.
 - [x] Add an explicit approval callback before form submission.
-- [x] Add exact-origin request filtering and a pre-approval POST gate for the local fixture.
+- [x] Limit the synthetic workflow to the exact local origin and a small endpoint/method allowlist.
+- [x] Require the single approved submission to be a main-frame document POST with a payload matching the reviewed form.
+- [x] Consume the one-time approval before forwarding the submission.
 - [x] Add safe pauses for simulated human verification and unexpected requests.
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
-- [x] Add tests for task-state rules, model-output validation, mock-site responses, and loopback URL validation.
-- [x] Add a browser test suite and CI workflow that installs Playwright Chromium.
-- [x] Verify the full suite in GitHub Actions: 21 tests passed.
-- [ ] Review the route guard against redirects, popups, frames, downloads, and other navigation edge cases before real-site work.
+- [x] Add a browser test suite for external requests, redirects, popups, frames, altered form actions/payloads, and duplicate submission attempts.
+- [ ] Verify the expanded browser suite in GitHub Actions before proceeding to a real-site adapter.
+- [ ] Conduct a broader security review for downloads, browser protocols, and remaining navigation edge cases.
 
-**Exit criteria:** CI proves the agent fills the correct fields on the mock site; no submission occurs before approval; a pre-approval POST is blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals. The automated suite passes; the remaining route-boundary review still blocks live-site integration.
+**Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
 
 ## Milestone 2 — First real source
 
-- [ ] Select one source after reviewing its official removal process, terms, required fields, and verification method.
-- [ ] Implement a narrowly scoped source adapter rather than letting a model invent arbitrary submission steps.
-- [ ] Test navigation and field mapping without submitting a real user's request.
-- [ ] Keep a pre-submission review of the destination and data categories.
-- [ ] Run a real request only with explicit user authorisation and accurate information supplied by that user.
-- [ ] Record the outcome and limitations; never claim deletion without verification.
+Candidate selected for investigation: Google's official personal-information removal form for Google Search. This is a search-result delisting workflow, not removal from the underlying website.
 
-**Exit criteria:** One real workflow has been exercised end-to-end, failures are handled safely, and submission and removal are reported as different states.
+- [ ] Document the official flow, supported request categories, required URLs, contact information, jurisdiction caveats, and verification states.
+- [ ] Add a source adapter that only targets the verified official Google form domains.
+- [ ] Test the adapter without submitting any actual personal information.
+- [ ] Keep a pre-submission review of the destination and data categories.
+- [ ] Require explicit user authorisation before any real request is submitted.
+- [ ] Record only minimal evidence; distinguish request receipt, Google's decision, and actual search-result changes.
+
+**Exit criteria:** One official workflow is exercised with explicit authorisation, failures are handled safely, and the original source is clearly distinguished from Google Search results.
 
 ## Milestone 3 — Small reliable queue
 
@@ -49,8 +52,6 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [ ] Track confirmation emails only with explicit user consent and minimal permissions.
 - [ ] Add a way to disable or revoke automation for a source.
 - [ ] Publish integration test requirements and a source maintenance checklist.
-
-**Exit criteria:** A small set of integrations is reliable, maintainable, and auditable. Reliability takes priority over integration count.
 
 ## Milestone 4 — Discovery and monitoring
 
