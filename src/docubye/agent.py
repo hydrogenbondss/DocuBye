@@ -50,7 +50,7 @@ def validate_local_base_url(base_url: str) -> str:
         host_ip = ipaddress.ip_address(parsed.hostname)
         port = parsed.port
     except ValueError as exc:
-        raise ValueError("The first milestone only permits an IPv4 loopback URL with an explicit port") from exc
+        raise ValueError("The first milestone only permits an IPv4 loopback URL at 127.0.0.1 with an explicit port") from exc
     if host_ip != ipaddress.IPv4Address("127.0.0.1"):
         raise ValueError("Only the mock site's exact loopback host 127.0.0.1 is permitted")
     if port is None:
@@ -134,6 +134,11 @@ class MockRemovalAgent:
                 if not submission_approved or submission_consumed:
                     deny(route, "POST /submit (no active one-time approval)", count_submission=True)
                     return
+
+                # Any attempt consumes the one-time approval, even if its frame or payload is invalid.
+                # This prevents a bad first request from leaving the approval token reusable.
+                submission_approved = False
+                submission_consumed = True
                 try:
                     is_main_frame = page is not None and request.frame == page.main_frame
                 except PlaywrightError:
@@ -149,9 +154,6 @@ class MockRemovalAgent:
                     deny(route, "POST /submit (payload differs from reviewed form)", count_submission=True)
                     return
 
-                # Consume approval before forwarding, so a script cannot reuse the same permission.
-                submission_approved = False
-                submission_consumed = True
                 submission_forwarded = True
                 route.continue_()
                 return

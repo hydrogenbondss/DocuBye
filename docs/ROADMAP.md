@@ -33,7 +33,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 
 ## Milestone 2 — First real source
 
-Candidate selected for investigation: Google's official personal-information removal form for Google Search. This is a search-result delisting workflow, not removal from the underlying website.
+Candidate selected for investigation: Google's official personal-information removal form for Google Search. This is a search-result delisting workflow, not removal from the underlying website. See [first-source review](FIRST_SOURCE_REVIEW.md).
 
 - [ ] Document the official flow, supported request categories, required URLs, contact information, jurisdiction caveats, and verification states.
 - [ ] Add a source adapter that only targets the verified official Google form domains.
