@@ -165,7 +165,9 @@ class MockRemovalAgent:
             host = parsed_socket.hostname or "<invalid-url>"
             blocked_hosts.append(host)
             blocked_requests.append(f"WEBSOCKET {host}"[:160])
-            websocket_route.close(code=1008, reason="Blocked by DocuBye synthetic-only guard")
+            # Do not call connect_to_server(): Playwright keeps this socket mocked,
+            # so page messages are handled locally and never forwarded externally.
+            websocket_route.on_message(lambda _message: None)
 
         with sync_playwright() as playwright:
             executable_path = os.getenv("DOCUBYE_CHROMIUM_EXECUTABLE") or None
