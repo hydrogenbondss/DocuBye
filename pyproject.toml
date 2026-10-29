@@ -18,6 +18,7 @@ ai = ["openai>=1.70"]
 
 [project.scripts]
 docubye = "docubye.cli:main"
+docubye-inspect-google-form = "docubye.google_inspect:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -38,7 +38,8 @@ Candidate: Google's official personal-contact-information Search-removal flow. T
 
 - [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
 - [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
-- [ ] Inspect the active contact-info branch interactively, without personal data or submission.
+- [x] Add a read-only local inspector command that selects the contact-info branch and records visible field metadata without filling or submitting.
+- [ ] Run the inspector locally and inspect the active contact-info branch without personal data or submission.
 - [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
 - [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
 - [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.

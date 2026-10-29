@@ -52,6 +52,14 @@ The default rules planner is offline and deterministic. To exercise optional mod
 
 The model receives only input names, field labels, types, and required flags. The profile's name, email, phone number, browser cookies, and credentials are not included in the model request. Remote inference is still a network call, so users should choose their provider deliberately.
 
+## Inspect the first real-source candidate safely
+
+After installing the package and Playwright Chromium, run:
+
+    docubye-inspect-google-form
+
+This opens a fresh browser context, selects only the public Google Search contact-info branch, and prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET request, unapproved hosts, and WebSockets. The command is a diagnostic aid; if the form cannot be inspected without an unsupported step, it reports that rather than proceeding.
+
 ## First real-source candidate
 
 The Google Search personal contact-info workflow is being investigated, not automated yet. Its current request contract and limitations are documented in docs/FIRST_SOURCE_REVIEW.md. Google Search removal does not delete the original website's content. The live form branch must be interactively inspected without personal data or submission before a browser adapter can be enabled.
