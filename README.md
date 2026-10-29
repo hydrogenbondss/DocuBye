@@ -16,7 +16,7 @@ DocuBye aims to do more than list privacy risks or generate opt-out instructions
 - Blocks external HTTP paths and WebSockets during the synthetic workflow.
 - Human handoff for verification challenges and unexpected requests.
 - A state machine that distinguishes submission from a separately verified result.
-- 61 passing tests in the latest verified GitHub Actions run.
+- 63 passing tests in the latest verified GitHub Actions run.
 
 ## Quick start
 
