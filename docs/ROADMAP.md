@@ -13,7 +13,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 
 ## Milestone 1 — Synthetic browser workflow
 
-**Status: implementation added; browser CI verification pending**
+**Status: implemented; GitHub Actions browser suite passed**
 
 - [x] Create a local mock opt-out site using synthetic data.
 - [x] Add a typed task state machine and a one-time submission-attempt guard.
@@ -25,10 +25,10 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
 - [x] Add tests for task-state rules, model-output validation, mock-site responses, and loopback URL validation.
 - [x] Add a browser test suite and CI workflow that installs Playwright Chromium.
-- [ ] Confirm the full browser suite passes in GitHub Actions; local environments without Playwright-managed Chromium skip those tests.
+- [x] Verify the full suite in GitHub Actions: 21 tests passed.
 - [ ] Review the route guard against redirects, popups, frames, downloads, and other navigation edge cases before real-site work.
 
-**Exit criteria:** CI proves the agent fills the correct fields on the mock site; no submission occurs before approval; a pre-approval POST is blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
+**Exit criteria:** CI proves the agent fills the correct fields on the mock site; no submission occurs before approval; a pre-approval POST is blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals. The automated suite passes; the remaining route-boundary review still blocks live-site integration.
 
 ## Milestone 2 — First real source
 
