@@ -76,7 +76,7 @@ def websocket_inspection_allowed(_url: str) -> bool:
 def _verification_challenge_visible(page) -> bool:
     """Return true when a visible CAPTCHA/human-verification element is present."""
     return bool(page.locator(
-        'iframe[src*="recaptcha"], iframe[title*="challenge" i], '
+        'iframe[src*="recaptcha"], iframe[title*="recaptcha" i], iframe[title*="challenge" i], '
         '.g-recaptcha, [data-sitekey], [id*="captcha" i], [class*="captcha" i]'
     ).evaluate_all(
         """elements => elements.some(el => {
