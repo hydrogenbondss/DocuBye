@@ -28,7 +28,7 @@ ALLOWED_READ_HOSTS = {
 }
 BLOCKED_HOSTS = {"accounts.google.com", "myaccount.google.com"}
 BLOCKED_PATH_RE = re.compile(
-    r"/(?:submit(?:request)?|formresponse|sendreport|sendreport)(?:/|$)",
+    r"/(?:submit(?:request)?|formresponse|send(?:report)?)(?:/|$)",
     re.IGNORECASE,
 )
 EXPECTED_CONTACT_STEPS = [
@@ -225,6 +225,9 @@ def _perform_human_handoff(
     report.visible_fields, report.visible_buttons = _visible_field_metadata(page)
 
     challenge_after = _verification_challenge_visible(page)
+    report.verification_challenge_detected = (
+        report.verification_challenge_detected or challenge_after
+    )
     if challenge_before and not challenge_after:
         report.verification_challenge_resolved = True
         report.notes.append(

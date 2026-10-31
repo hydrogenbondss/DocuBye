@@ -214,3 +214,49 @@ def test_human_handoff_requires_visible_browser():
 
     with pytest.raises(ValueError, match="requires a visible browser"):
         inspect_google_contact_form(headless=True, human_handoff=True)
+
+
+def test_human_handoff_reports_a_challenge_that_appears_during_observation():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content("<html><body><p>Initial page</p></body></html>")
+        report = InspectionReport(start_url="https://support.google.com/form")
+
+        def operator_sees_new_challenge(_message):
+            page.set_content(
+                '<iframe title="reCAPTCHA" src="about:blank" width="304" height="78"></iframe>'
+            )
+            return ""
+
+        _perform_human_handoff(page, report, operator_sees_new_challenge)
+        assert report.verification_challenge_detected is True
+        assert report.verification_challenge_resolved is False
+        browser.close()
+
+
+def test_cli_requires_headed_mode_for_human_handoff(monkeypatch):
+    import sys
+    from docubye.google_inspect import main
+
+    monkeypatch.setattr(sys, "argv", ["docubye-inspect-google-form", "--human-handoff"])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+
+
+def test_cli_requires_an_interactive_terminal_for_human_handoff(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from docubye.google_inspect import main
+
+    monkeypatch.setattr(
+        sys, "argv", ["docubye-inspect-google-form", "--headed", "--human-handoff"]
+    )
+    monkeypatch.setattr(sys, "stdin", SimpleNamespace(isatty=lambda: False))
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
