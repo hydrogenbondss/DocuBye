@@ -162,7 +162,7 @@ def test_human_handoff_records_only_metadata_and_selected_choice_labels():
         assert report.visible_buttons == ["Next", "Submit"]
         assert "must-never-appear@example.test" not in repr(report)
         assert "GET/HEAD" in prompts[0]
-        assert "Do NOT sign in" in prompts[0]
+        assert "do NOT sign in" in prompts[0]
         assert any("1 request(s) were blocked" in note for note in report.notes)
         assert report.submitted is False
         assert report.filled_fields is False
