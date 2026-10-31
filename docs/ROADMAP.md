@@ -40,8 +40,10 @@ Candidate: Google's official personal-contact-information Search-removal flow. T
 - [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
 - [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
 - [x] Add a headed operator-handoff mode: manual observation only, no input filling/value reads, and the exact GET/HEAD host guard remains enforced.
-- [ ] Run the headed handoff against the current public form and verify the active contact-info branch; the branch remains unverified until that evidence is recorded.
-- [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
+- [x] Manually confirm in the user's regular browser that selecting “Content contains your personal information” reaches the live contact-info form state and exposes the required address/phone/email value prompt (31 October 2026; no values entered and nothing submitted).
+- [ ] Capture the exact choices for the personal-information selector and doxxing question, plus all lower-page fields and declarations.
+- [ ] Diagnose the headed Playwright handoff failure (`TargetClosedError` / no usable page) and obtain safe field metadata without weakening the no-submission boundary.
+- [ ] Confirm stable active-field selectors/attributes and all required flags; pause on uncertainty.
 - [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
 - [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.
 - [ ] Conduct a non-submitting smoke test against the live form without any real profile data.
