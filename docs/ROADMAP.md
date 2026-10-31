@@ -1,43 +1,56 @@
 # Roadmap
 
-This roadmap is deliberately evidence-gated. Do not skip ahead based on a successful demo alone.
+This roadmap is evidence-gated. Do not skip ahead based on a successful demo alone.
 
 ## Milestone 0 — Product and safety foundation
 
-**Status:** In progress
+**Status: complete**
 
 - [x] Create public repository and MIT licence.
-- [x] Write initial product brief.
-- [x] Record the proposed architecture and guardrails.
-- [x] Define a simulated-first acceptance test.
-- [ ] Confirm the first implementation stack and record the decision.
-- [ ] Add contribution, reporting, and security guidance before inviting outside contributors.
-
-**Exit criteria:** Scope, permissions, data handling, and the first workflow are clear enough to implement without inventing product policy during coding.
+- [x] Define product scope and honest limitations.
+- [x] Document architecture and safety guardrails.
+- [x] Create an implementation issue for the first vertical slice.
 
 ## Milestone 1 — Synthetic browser workflow
 
-- [ ] Create a local mock site that represents a typical opt-out form.
-- [ ] Create a synthetic profile and a fixture with no real personal information.
-- [ ] Navigate to the form and map the approved fields.
-- [ ] Show the request destination and data summary.
-- [ ] Block submission until approval is explicitly given.
-- [ ] Capture minimal task evidence and implement clear state transitions.
-- [ ] Add tests for incorrect mappings, prompt injection, timeout, retry, and duplicate-submission prevention.
-- [ ] Demonstrate a human handoff for a simulated CAPTCHA or identity check.
+**Status: implemented; CI browser suite passed**
 
-**Exit criteria:** Repeatable automated tests prove the permission gates and state machine work. Screenshots or logs do not leak personal values.
+- [x] Create a local mock opt-out site using synthetic data.
+- [x] Add a typed task state machine and a one-time submission-attempt guard.
+- [x] Implement Playwright navigation, field mapping, and review preparation.
+- [x] Add an explicit approval callback before form submission.
+- [x] Limit the synthetic workflow to the exact local origin and a small endpoint/method allowlist.
+- [x] Require the single approved submission to be a main-frame document POST with a payload matching the reviewed form.
+- [x] Consume the one-time approval before forwarding the submission.
+- [x] Block outbound HTTP navigation paths and WebSockets in the synthetic browser.
+- [x] Add safe pauses for simulated human verification and unexpected requests.
+- [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
+- [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
+- [x] Add browser tests for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, duplicate submission attempts, and approval states.
+- [x] Verify the full suite in GitHub Actions: 79 tests passed in 26.59 seconds on commit `f47b17b`; both push and pull-request workflows passed.
+- [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
+
+**Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
 
 ## Milestone 2 — First real source
 
-- [ ] Select one source after reviewing the official removal process, terms, required fields, and verification method.
-- [ ] Implement a narrowly scoped source adapter.
-- [ ] Test on the official workflow without submitting a real user's request.
-- [ ] Add a pre-submission review of the destination and data categories.
-- [ ] Run one real request only with the user's explicit authorisation and the required accurate information.
-- [ ] Record the actual outcome and limitations; don't claim deletion without verification.
+Candidate: Google's official personal-contact-information Search-removal flow. This is request-contract preparation, not a working browser adapter. See [first-source review](FIRST_SOURCE_REVIEW.md) and [Issue #3](https://github.com/hydrogenbondss/DocuBye/issues/3).
 
-**Exit criteria:** At least one real workflow has been exercised end-to-end, failures are handled safely, and submission and removal are reported as different states.
+- [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
+- [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
+- [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
+- [x] Add a headed operator-handoff mode: manual observation only, no input filling/value reads, and the exact GET/HEAD host guard remains enforced.
+- [x] Manually confirm in the user's regular browser that selecting “Content contains your personal information” reaches the live contact-info form state and exposes the required address/phone/email value prompt (31 October 2026; no values entered and nothing submitted).
+- [ ] Capture the exact choices for the personal-information selector and doxxing question, plus all lower-page fields and declarations.
+- [ ] Diagnose the headed Playwright handoff failure (`TargetClosedError` / no usable page) and obtain safe field metadata without weakening the no-submission boundary.
+- [ ] Confirm stable active-field selectors/attributes and all required flags; pause on uncertainty.
+- [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
+- [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.
+- [ ] Conduct a non-submitting smoke test against the live form without any real profile data.
+- [ ] Enable real submissions only after user review and explicit approval, outside automated tests.
+- [ ] Record request receipt, Google's decision, and observed Search result changes as separate states.
+
+**Exit criteria:** The live workflow is verified without submission first; any real submission requires exact user approval; the source adapter is narrow and tested; logs redact values; and no result is called removed without verification.
 
 ## Milestone 3 — Small reliable queue
 
@@ -48,20 +61,12 @@ This roadmap is deliberately evidence-gated. Do not skip ahead based on a succes
 - [ ] Add a way to disable or revoke automation for a source.
 - [ ] Publish integration test requirements and a source maintenance checklist.
 
-**Exit criteria:** A small set of integrations is reliable, maintainable, and auditable. Reliability takes priority over integration count.
-
 ## Milestone 4 — Discovery and monitoring
 
 - [ ] Add discovery sources incrementally, starting with user-provided URLs and narrowly scoped official/search sources.
 - [ ] Add scheduled rechecks where permitted and technically meaningful.
 - [ ] Separate removal at the original source from search-result delisting and cached copies.
-- [ ] Add jurisdiction-specific workflows only after documenting the applicable rules and limitations.
-
-**Exit criteria:** Every finding has a source, confidence level, recommended action, and clear verification status.
-
-## Later — Broader ecosystem
-
-Possible future work includes additional countries, community-maintained adapters, local-model support, and integrations for account deletion or search-result removal. These should follow evidence of a reliable core, not precede it.
+- [ ] Add jurisdiction-specific workflows only after documenting applicable rules and limitations.
 
 ## Non-negotiable release gates
 
@@ -69,4 +74,4 @@ Possible future work includes additional countries, community-maintained adapter
 - No CAPTCHA or access-control bypass.
 - No secrets in source control or ordinary logs.
 - No claim of successful removal without evidence.
-- No integration shipped without tests, a documented human-handoff path, and a last-tested date.
+- No integration shipped without tests, documented human handoff, and a last-tested date.
