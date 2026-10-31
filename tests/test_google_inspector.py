@@ -1,6 +1,13 @@
 import pytest
 
-from docubye.google_inspect import inspection_request_allowed, websocket_inspection_allowed
+from docubye.google_inspect import (
+    EXPECTED_CONTACT_STEPS,
+    InspectionReport,
+    _perform_human_handoff,
+    _safe_report_url,
+    inspection_request_allowed,
+    websocket_inspection_allowed,
+)
 
 
 @pytest.mark.parametrize(
@@ -10,7 +17,9 @@ from docubye.google_inspect import inspection_request_allowed, websocket_inspect
         ("https://www.google.com/search?q=example", "GET", True),
         ("https://www.gstatic.com/s2/branding/product/1x/googlelogo.png", "GET", True),
         ("https://support.google.com/websearch/contact/content_removal_form", "POST", False),
+        ("https://support.google.com/websearch/contact/content_removal_form", "PUT", False),
         ("https://support.google.com/websearch/contact/content_removal_form/submit", "GET", False),
+        ("https://support.google.com/websearch/contact/content_removal_form/formResponse", "GET", False),
         ("https://accounts.google.com/signin", "GET", False),
         ("http://support.google.com/websearch/contact/content_removal_form", "GET", False),
         ("https://example.com/redirect", "GET", False),
@@ -25,6 +34,12 @@ def test_inspection_network_policy(url, method, expected):
 def test_websockets_are_never_enabled_for_inspection():
     assert websocket_inspection_allowed("wss://support.google.com/socket") is False
     assert websocket_inspection_allowed("wss://example.com/socket") is False
+
+
+def test_report_urls_drop_query_strings_and_fragments():
+    assert _safe_report_url(
+        "https://support.google.com/form?email=private@example.test#access_token=secret"
+    ) == "https://support.google.com/form"
 
 
 def test_inspector_selects_only_visible_exact_labels_and_never_reads_values():
@@ -66,8 +81,6 @@ def test_inspector_selects_only_visible_exact_labels_and_never_reads_values():
         assert all(not hasattr(field, "value") for field in fields)
         assert "not-for-logging@example.test" not in repr(fields)
         assert page.locator("#email").input_value() == "not-for-logging@example.test"
-        # The inspector helpers only select choices and read metadata; they never submit.
-        assert page.locator("body").inner_text().find("Submit") >= 0
         browser.close()
 
 
@@ -97,7 +110,6 @@ def test_inspector_stops_before_branch_selection_when_captcha_is_visible():
             '<iframe title="reCAPTCHA" src="about:blank" width="304" height="78"></iframe>'
         )
         assert _safe_to_inspect_without_handoff(page) is False
-        # The inspector must return at the handoff gate, before it selects a branch.
         assert page.locator("#personal").is_checked() is False
         browser.close()
 
@@ -115,3 +127,90 @@ def test_inspector_does_not_treat_hidden_captcha_as_visible_challenge():
         )
         assert _verification_challenge_visible(page) is False
         browser.close()
+
+
+def test_human_handoff_records_only_metadata_and_selected_choice_labels():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+
+    html = """<!doctype html>
+    <html><body>
+      <label><input type="radio" checked name="kind" value="private">Content contains your personal information</label>
+      <label><input type="radio" checked name="info" value="secret">Address, phone number, and/or e-mail address</label>
+      <label for="contact">Contact email</label>
+      <input id="contact" name="contact_email" value="must-never-appear@example.test">
+      <button type="button">Next</button>
+      <button type="submit">Submit</button>
+    </body></html>"""
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(html)
+        report = InspectionReport(start_url="https://support.google.com/form")
+        report.blocked_requests.append(
+            {"method": "POST", "host": "support.google.com", "path": "/form"}
+        )
+        prompts = []
+        _perform_human_handoff(page, report, lambda message: prompts.append(message) or "")
+
+        assert report.human_handoff_offered is True
+        assert report.human_handoff_used is True
+        assert report.verification_challenge_detected is False
+        assert report.selected_steps == EXPECTED_CONTACT_STEPS
+        assert {field.name for field in report.visible_fields} >= {"kind", "info", "contact_email"}
+        assert report.visible_buttons == ["Next", "Submit"]
+        assert "must-never-appear@example.test" not in repr(report)
+        assert "GET/HEAD" in prompts[0]
+        assert "Do NOT sign in" in prompts[0]
+        assert any("1 request(s) were blocked" in note for note in report.notes)
+        assert report.submitted is False
+        assert report.filled_fields is False
+        browser.close()
+
+
+def test_human_handoff_reports_a_captcha_that_remains_visible():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(
+            '<iframe title="reCAPTCHA" src="about:blank" width="304" height="78"></iframe>'
+        )
+        report = InspectionReport(start_url="https://support.google.com/form")
+        _perform_human_handoff(page, report, lambda _message: "")
+        assert report.verification_challenge_detected is True
+        assert report.verification_challenge_resolved is False
+        assert any("remains visible" in note for note in report.notes)
+        browser.close()
+
+
+def test_human_handoff_marks_only_a_previously_visible_challenge_as_resolved():
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(
+            '<iframe id="challenge" title="reCAPTCHA" src="about:blank" width="304" height="78"></iframe>'
+        )
+        report = InspectionReport(start_url="https://support.google.com/form")
+
+        def operator_clears_challenge(_message):
+            page.locator("#challenge").evaluate("(el) => el.remove()")
+            return ""
+
+        _perform_human_handoff(page, report, operator_clears_challenge)
+        assert report.verification_challenge_detected is True
+        assert report.verification_challenge_resolved is True
+        browser.close()
+
+
+def test_human_handoff_requires_visible_browser():
+    from docubye.google_inspect import inspect_google_contact_form
+
+    with pytest.raises(ValueError, match="requires a visible browser"):
+        inspect_google_contact_form(headless=True, human_handoff=True)

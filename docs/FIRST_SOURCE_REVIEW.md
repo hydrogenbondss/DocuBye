@@ -17,6 +17,18 @@ The “Content contains your personal information” radio was selected during t
 
 **Conclusion:** the active sub-branch and its required fields remain unverified. The earlier request contract is a provisional data model based on public Help text and the form document, not a selector map for the live UI. No real-source adapter should be implemented until a person can safely take over the verification step, without entering personal data or submitting a request.
 
+## Guarded human-handoff mode
+
+The inspector now supports:
+
+    docubye-inspect-google-form --headed --human-handoff
+
+This launches a fresh, unauthenticated visible browser and pauses in the terminal for a person to inspect the public form. The person may select navigation choices but must stop before data-entry fields; they must not sign in, enter personal information, upload files, or click Submit. On return, DocuBye records only selected radio labels, visible field names/types/labels/placeholders/required/disabled flags, visible button labels, and blocked-request method/host/path metadata. The report omits input values, cookies, request bodies, screenshots, query strings, and fragments.
+
+The handoff uses the same network guard as automatic inspection. It allows only HTTPS GET/HEAD requests to the explicit Google host allowlist; it blocks all other methods, unapproved hosts, WebSockets, and known submission paths. This is intentionally restrictive. A CAPTCHA verification request or wizard transition that requires POST may remain blocked, in which case the branch remains unverified. The handoff is an observation aid, not a CAPTCHA workaround and not a form-submission capability. Do not relax the guard merely to advance the wizard.
+
+**The handoff mode has been implemented and covered by synthetic tests, but it has not yet been run interactively against the live form from a user's desktop.** The active branch and its fields therefore remain unverified.
+
 ## What the official form currently shows
 
 The public form starts by asking what kind of personal-content removal is requested and the country of residence. Within the personal-information path, it offers a narrow option for **address, phone number, and/or email address**; other options include government IDs, bank/credit-card details, official records, login credentials, and other personal information. DocuBye must not allow the model to choose a broader category.
@@ -54,9 +66,9 @@ These checks validate request structure; they do **not** determine legal eligibi
 
 ## Next steps before a real adapter
 
-1. Run a non-submitting interactive inspection of the active contact-info branch on the official form, with no real profile loaded.
-2. Record the exact visible required fields, their stable labels/attributes, whether any account login is needed, and all branch decisions.
-3. Build deterministic, source-specific field filling; keep actual values out of model prompts and ordinary logs.
+1. Run a non-submitting interactive inspection of the active contact-info branch using the headed human-handoff command, with no real profile loaded.
+2. Record the exact visible required fields, their stable labels/attributes, whether any account login is needed, and all branch decisions. Record any blocked wizard transition; do not weaken the route guard just to continue.
+3. Build deterministic, source-specific field filling only after the live branch is confirmed; keep actual values out of model prompts and ordinary logs.
 4. Present the full destination, category, exposed value, source URLs, Search result URLs, terms, country, contact channel, and any context/screenshot that will be sent for human review.
 5. Require a fresh explicit approval tied to that exact review; pause on any CAPTCHA, login, identity check, new declaration, changed destination, or unrecognised field.
 6. Keep automated tests synthetic and non-submitting. No live requests in CI.

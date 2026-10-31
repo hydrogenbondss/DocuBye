@@ -27,7 +27,7 @@ This roadmap is evidence-gated. Do not skip ahead based on a successful demo alo
 - [x] Distinguish submitted, awaiting confirmation, and fixture-verified removal.
 - [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
 - [x] Add browser tests for external requests, redirects, popups, frames, WebSockets, altered form actions/payloads, duplicate submission attempts, and approval states.
-- [x] Verify the full suite in GitHub Actions: 63 tests passed, including CAPTCHA-detection and human-handoff regression tests.
+- [x] Verify the full suite in GitHub Actions: 63 tests passed at the prior checkpoint; the handoff additions are validated separately by the new CI run.
 - [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
 **Exit criteria:** CI proves the agent fills the correct fields on the mock site; the browser cannot submit before approval; the one-time gate cannot be reused; altered requests are blocked; unexpected steps pause safely; and submitted requests are never mislabeled as verified removals.
@@ -39,8 +39,8 @@ Candidate: Google's official personal-contact-information Search-removal flow. T
 - [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
 - [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
 - [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
-- [x] Run a fresh unauthenticated, non-submitting inspection of the public form: a CAPTCHA was visible before the Next step, so the active contact-info branch remains unverified.
-- [ ] Find a safe human-handoff path to inspect the active branch without bypassing CAPTCHA or sending a removal request.
+- [x] Add a headed operator-handoff mode: manual observation only, no input filling/value reads, and the exact GET/HEAD host guard remains enforced.
+- [ ] Run the headed handoff against the current public form and verify the active contact-info branch; the branch remains unverified until that evidence is recorded.
 - [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
 - [ ] Implement a narrowly scoped Playwright adapter for the confirmed official branch.
 - [ ] Test navigation, field filling, request approval, and route guard on a local simulated form.

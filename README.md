@@ -16,7 +16,8 @@ DocuBye aims to do more than list privacy risks or generate opt-out instructions
 - Blocks external HTTP paths and WebSockets during the synthetic workflow.
 - Human handoff for verification challenges and unexpected requests.
 - A state machine that distinguishes submission from a separately verified result.
-- 63 passing tests in the latest verified GitHub Actions run.
+- A read-only Google form inspector with a headed, operator-assisted observation mode.
+- 63 tests passed at the previous checkpoint; the current branch adds handoff and report-redaction coverage.
 
 ## Quick start
 
@@ -54,11 +55,23 @@ The model receives only input names, field labels, types, and required flags. Th
 
 ## Inspect the first real-source candidate safely
 
-After installing the package and Playwright Chromium, run:
+The default command uses a fresh, unauthenticated browser context:
 
     docubye-inspect-google-form
 
-This opens a fresh browser context and prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET request, unapproved hosts, and WebSockets. If a CAPTCHA or human-verification element is visible, it stops before selecting any branch and reports a human handoff. The first live inspection found a CAPTCHA before the Next step, so the contact-info sub-branch has not yet been verified.
+It prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET/HEAD request, unapproved hosts, and WebSockets. If a CAPTCHA or human-verification element is visible, automatic mode stops before selecting any branch.
+
+For a person to inspect the live wizard, run the explicit headed handoff:
+
+    docubye-inspect-google-form --headed --human-handoff
+
+The browser remains visible while the terminal waits. A person may inspect the public wizard and select navigation choices, then press Enter to capture visible labels and field metadata. The report includes selected radio labels and blocked-request method/host/path metadata. It strips query strings and fragments from the final URL.
+
+**The human handoff does not relax the network guard.** Only HTTPS GET/HEAD requests to the small Google-host allowlist are permitted. Every POST/PUT/PATCH/DELETE request, unapproved host, WebSocket, and known submission endpoint remains blocked. This may prevent a CAPTCHA or Next button from working. Do not sign in, enter personal information, upload files, click Submit, use an authenticated browser profile, or try to bypass a blocked request. If the branch cannot be reached under these restrictions, stop and record that it remains unverified.
+
+The inspector never reads input values, cookies, request bodies, or screenshots. Its report sets submission and field-filling flags to false. It is a diagnostic for human observation, not a live removal adapter.
+
+The first live inspection found a CAPTCHA before the Next step, so the contact-info sub-branch remains unverified until a person can inspect it through the guarded handoff without bypassing verification or submitting a request.
 
 ## First real-source candidate
 

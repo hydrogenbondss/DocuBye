@@ -43,7 +43,7 @@ The models module implements a typed state machine and a one-time submission-att
 
 The source module validates a draft for the limited address/phone/email Search-removal branch and prepares a full user review plus a redacted audit record. Its approval token is bound to the request fingerprint and is consumed on the first attempt, including a mismatch. It still does not submit a request or establish that Google's dynamic form has been mapped.
 
-The docubye-inspect-google-form command is a separate read-only diagnostic: it uses a fresh browser context, selects the public contact-info branch, enumerates visible field labels/attributes without input values, blocks non-GET requests and unapproved hosts, and never opens WebSockets or clicks Next/Submit. Its interactive run is still required before any live adapter.
+The docubye-inspect-google-form command uses a fresh browser context and collects visible field metadata without input values. Automatic mode stops if a CAPTCHA is visible. The optional --headed --human-handoff mode pauses for a person to observe the public wizard. It records selected radio labels and non-sensitive field metadata after the person returns, while retaining the same strict network policy: HTTPS GET/HEAD requests to approved hosts only; no non-GET methods, external hosts, WebSockets, or known submission paths. Query strings and fragments are excluded from report URLs. If a challenge or Next step needs a blocked request, the wizard cannot progress and remains unverified. This is not a CAPTCHA workaround, not a production browser sandbox, and not a live removal adapter.
 
 ## Proposed tools
 
