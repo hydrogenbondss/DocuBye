@@ -27,7 +27,7 @@ This launches a fresh, unauthenticated visible browser and pauses in the termina
 
 The handoff uses the same network guard as automatic inspection. It allows only HTTPS GET/HEAD requests to the explicit Google host allowlist; it blocks all other methods, unapproved hosts, WebSockets, and known submission paths. This is intentionally restrictive. A CAPTCHA verification request or wizard transition that requires POST may remain blocked, in which case the branch remains unverified. The handoff is an observation aid, not a CAPTCHA workaround and not a form-submission capability. Do not relax the guard merely to advance the wizard.
 
-**The handoff mode has been implemented and covered by synthetic tests, but it has not yet been run interactively against the live form from a user's desktop.** The active branch and its fields therefore remain unverified.
+**Live handoff attempt (31 October 2026):** the user ran the command from a fresh local checkout. The browser page did not load into a usable form, and the capture ended with `TargetClosedError`. The report contained no selected steps, visible fields, or visible buttons. It recorded blocked requests to Google font/telemetry services, the support-site feedback endpoint, and account/widget services. No personal values were entered, no fields were filled, and nothing was submitted. This is a failed inspection attempt, not evidence that the contact-info branch is inaccessible or that any particular blocked request is required by the form. The current policy intentionally blocks all POST requests, so the wizard may not function fully under this guard. Do not whitelist POST traffic or weaken the guard simply to make the page render; first determine a narrowly scoped, independently reviewed read-only inspection method. The active branch and its required fields therefore remain unverified.
 
 ## What the official form currently shows
 
@@ -35,7 +35,7 @@ The public form starts by asking what kind of personal-content removal is reques
 
 The form text currently exposes fields for the exact contact value as shown on the page, source content URL(s), Google Search results page URL(s), search terms, additional context, and a final accuracy/authority attestation. It also contains country and contact-information prompts. The public help says Google needs context and contact information and may preserve content considered to be in the public interest.
 
-**Inspection limitation:** This was a non-submitting inspection of the public page text. The page includes multiple conditional report branches in the same document, so this does not prove which fields are visible or required after the contact-info branch is selected. An interactive, non-submitting inspection of the active branch is still required before implementing selectors or enabling an adapter. Do not infer visible form state from the full document text.
+**Inspection limitation:** The current public page content exposes the address/phone/email option and associated field labels, but it contains multiple conditional report branches in one document. It does not prove which fields are visible or required after that option is selected. The 31 October headed browser attempt did not capture a usable UI state. An interactive, non-submitting inspection of the active branch is still required before implementing selectors or enabling an adapter. Do not infer visible form state from the full document text.
 
 ## Narrow intended scope
 
@@ -76,6 +76,6 @@ These checks validate request structure; they do **not** determine legal eligibi
 
 ## Sources checked
 
-- Google's [official personal-content removal form](https://support.google.com/websearch/contact/content_removal_form?hl=en), inspected 30 October 2026.
+- Google's [official personal-content removal form](https://support.google.com/websearch/contact/content_removal_form?hl=en), page content checked 31 October 2026; interactive browser inspection attempted 31 October 2026 but did not render a usable form.
 - Google's [personal-info Search-removal guidance](https://support.google.com/websearch/answer/12719076?hl=en), inspected 30 October 2026.
 - Google's [general removal guidance](https://support.google.com/websearch/answer/9673730?hl=en), inspected 30 October 2026.
