@@ -71,11 +71,11 @@ The browser remains visible while the terminal waits. A person may inspect the p
 
 The inspector never reads input values, cookies, request bodies, or screenshots. Its report sets submission and field-filling flags to false. It is a diagnostic for human observation, not a live removal adapter.
 
-The first live inspection found a CAPTCHA before the Next step, so the contact-info sub-branch remains unverified until a person can inspect it through the guarded handoff without bypassing verification or submitting a request.
+A manual inspection in the user's regular browser on 31 October 2026 confirmed that selecting “Content contains your personal information” reaches the live contact-info form state. The visible prompts include the address/phone/email value as it appears on the page, a separate email field as it appears on the page, and a required question about malicious or threatening intent. No values were entered and nothing was submitted. The exact selector choices, doxxing answer choices, lower-page fields, stable DOM selectors, and required flags are still being recorded. The headed Playwright handoff separately failed to render a usable page (`TargetClosedError`), so this manual observation does not mean the automated inspector or a live adapter is complete.
 
 ## First real-source candidate
 
-The Google Search personal contact-info workflow is being investigated, not automated yet. Its current request contract and limitations are documented in docs/FIRST_SOURCE_REVIEW.md. Google Search removal does not delete the original website's content. The live form branch must be interactively inspected without personal data or submission before a browser adapter can be enabled.
+The Google Search personal contact-info workflow is being investigated, not automated yet. The contact-info branch has been manually confirmed at the UI-label level, but its full field map and stable selectors are not complete, and the headed Playwright inspector still needs repair/validation. Its current request contract and limitations are documented in docs/FIRST_SOURCE_REVIEW.md. Google Search removal does not delete the original website's content. No live adapter or submission capability is enabled.
 
 ## Principles
 
