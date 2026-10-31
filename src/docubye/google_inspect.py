@@ -93,6 +93,14 @@ def inspection_request_allowed(url: str, method: str) -> bool:
     host = (parsed.hostname or "").casefold().rstrip(".")
     if parsed.scheme != "https" or host not in ALLOWED_READ_HOSTS:
         return False
+    if parsed.username is not None or parsed.password is not None:
+        return False
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    if port not in {None, 443}:
+        return False
     if host in BLOCKED_HOSTS or method.upper() not in {"GET", "HEAD"}:
         return False
     if BLOCKED_PATH_RE.search(parsed.path):
