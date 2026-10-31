@@ -17,7 +17,7 @@ DocuBye aims to do more than list privacy risks or generate opt-out instructions
 - Human handoff for verification challenges and unexpected requests.
 - A state machine that distinguishes submission from a separately verified result.
 - A read-only Google form inspector with a headed, operator-assisted observation mode.
-- 63 tests passed at the previous checkpoint; the current branch adds handoff and report-redaction coverage.
+- 79 passing tests in the latest green GitHub Actions push and pull-request runs (26.59 seconds on commit `f47b17b`).
 
 ## Quick start
 
