@@ -46,6 +46,15 @@ _Amendment (PR #2 review): recovery and persistence requirements added explicitl
 - [ ] Run one real request only with the user's explicit authorisation and the required accurate information.
 - [ ] Record the actual outcome and limitations; don't claim deletion without verification.
 
+_Amendment (first-source research branch): candidate selected — Google's official personal-contact-information Search-removal flow. Research progress below is request-contract preparation and read-only inspection, not a working adapter. See [first-source review](FIRST_SOURCE_REVIEW.md)._
+
+- [x] Inspect official form text without submitting and record the categories/fields visible in the current page source.
+- [x] Add a pure request-draft, review, redacted-audit, and one-time-approval contract for address/phone/email.
+- [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
+- [x] Add a headed operator-handoff mode: manual observation only, no input filling/value reads, and the exact GET/HEAD host guard remains enforced.
+- [ ] Run the headed handoff against the current public form and verify the active contact-info branch; the branch remains unverified until that evidence is recorded.
+- [ ] Confirm exact active fields and stable selectors; pause on uncertainty.
+
 **Exit criteria:** At least one real workflow has been exercised end-to-end, failures are handled safely, and submission and removal are reported as different states.
 
 ## Milestone 3 — Small reliable queue
