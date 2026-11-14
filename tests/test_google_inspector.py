@@ -266,3 +266,102 @@ def test_cli_requires_an_interactive_terminal_for_human_handoff(monkeypatch):
     with pytest.raises(SystemExit) as error:
         main()
     assert error.value.code == 2
+
+
+def test_popup_guard_closes_popups_but_never_the_main_page(chromium):
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _install_popup_guard
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context()
+        holder: dict = {}
+        _install_popup_guard(context, holder)
+        page = context.new_page()
+        holder["page"] = page
+        page.set_content("<body>main</body>")
+        page.evaluate("window.open('about:blank', '_blank')")
+        page.wait_for_timeout(300)
+        assert context.pages == [page]
+        assert not page.is_closed()
+        browser.close()
+
+
+def test_resolve_working_page_adopts_a_single_guarded_survivor(chromium):
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _resolve_working_page
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context()
+        main = context.new_page()
+        replacement = context.new_page()
+        main.close()
+        resolved = _resolve_working_page(context, main)
+        assert resolved is replacement
+        browser.close()
+
+
+def test_resolve_working_page_returns_none_when_everything_is_closed(chromium):
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _resolve_working_page
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.close()
+        assert _resolve_working_page(context, page) is None
+        browser.close()
+
+
+def test_handoff_records_a_note_instead_of_raising_when_the_window_closes(chromium):
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _perform_human_handoff
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_content("<p>wizard</p>")
+        report = InspectionReport(start_url="https://support.google.com/form")
+
+        def operator_closes_window(_message):
+            page.close()
+            return ""
+
+        _perform_human_handoff(page, report, operator_closes_window, context=context)
+        assert report.human_handoff_used is True
+        assert any("window was closed" in note for note in report.notes)
+        browser.close()
+
+
+def test_handoff_adopts_a_replacement_tab_without_target_closed_error(chromium):
+    pytest.importorskip("playwright")
+    from playwright.sync_api import sync_playwright
+    from docubye.google_inspect import _perform_human_handoff
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_content("<p>redirect step</p>")
+        report = InspectionReport(start_url="https://support.google.com/form")
+
+        def operator_lands_in_new_tab(_message):
+            replacement = context.new_page()
+            replacement.set_content(
+                '<label><input type="radio" checked name="kind">Content contains your personal information</label>'
+            )
+            page.close()
+            return ""
+
+        _perform_human_handoff(page, report, operator_lands_in_new_tab, context=context)
+        assert report.human_handoff_used is True
+        assert any("replacement tab" in note for note in report.notes)
+        assert report.selected_steps == ["Content contains your personal information"]
+        browser.close()

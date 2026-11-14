@@ -19,6 +19,7 @@ dev = ["pytest>=8,<10"]
 docubye = "docubye.cli:main"
 docubye-inspect-google-form = "docubye.google_inspect:main"
 docubye-google-dry-run = "docubye.sources.google:main"
+docubye-capture-google-fixtures = "docubye.sources.google_capture:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
