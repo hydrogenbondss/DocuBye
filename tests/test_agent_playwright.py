@@ -8,9 +8,9 @@ from docubye.store import ApprovalState, TaskStore
 pytest.importorskip("playwright")
 
 
-def run_agent(base_url, profile, approval, planner=None, store=None):
+def run_agent(base_url, profile, approval, planner=None, store=None, task=None):
     agent = MockRemovalAgent(planner=planner, headless=True)
-    return agent.run(base_url, profile, approval, store=store)
+    return agent.run(base_url, profile, approval, store=store, task=task)
 
 
 def test_loopback_url_validation_blocks_external_origins():
@@ -232,6 +232,52 @@ def test_paused_task_resumes_only_after_human_resolution(chromium, tmp_path):
         with pytest.raises(ValueError, match="not ready for approved submission"):
             resumed.task.begin_submission()
         assert state.submission_count == 0
+
+
+def test_resumed_task_continues_under_the_same_task_id(chromium, tmp_path):
+    store_path = tmp_path / "tasks.sqlite3"
+    with running_mock_site("challenge") as (base_url, state):
+        store = TaskStore(store_path)
+        paused = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store)
+        assert paused.task.status is TaskStatus.AWAITING_USER
+        task_id = paused.task.task_id
+        store.close()
+
+        # The blocking step is resolved; the fixture now serves the normal form.
+        state.scenario = "normal"
+
+        # Resume and re-inspect, but withhold approval: nothing may be sent.
+        store = TaskStore(store_path)
+        resumed = resume_paused_task(
+            store, task_id, "Operator cleared the verification step", human_confirmed=True
+        )
+        waiting = run_agent(base_url, SyntheticProfile(), lambda review: None, store=store, task=resumed.task)
+        assert waiting.task.task_id == task_id
+        assert waiting.task.status is TaskStatus.AWAITING_USER
+        assert any(event.status == "ready_for_review" for event in waiting.task.events)
+        assert state.submission_count == 0
+
+        # Resume once more and approve: exactly one submission under the same task ID.
+        resumed = resume_paused_task(
+            store, task_id, "Operator reviewed and approved the request", human_confirmed=True
+        )
+        final = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store, task=resumed.task)
+        assert final.task.task_id == task_id
+        assert final.task.status is TaskStatus.AWAITING_CONFIRMATION
+        assert state.submission_count == 1
+        assert len(state.confirmations) == 1
+
+        history = [event.detail for event in final.task.events]
+        assert history[: len(paused.task.events)] == [event.detail for event in paused.task.events]
+        assert sum("Resumed after human resolution" in detail for detail in history) == 2
+
+
+def test_run_refuses_to_start_a_task_that_is_not_discovered(chromium, tmp_path):
+    store = TaskStore(tmp_path / "tasks.sqlite3")
+    with running_mock_site("normal") as (base_url, _state):
+        result = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store)
+        with pytest.raises(ValueError, match="Only a DISCOVERED task"):
+            run_agent(base_url, SyntheticProfile(), lambda review: True, store=store, task=result.task)
 
 
 def test_two_tasks_with_identical_data_get_separate_idempotency_records(chromium, tmp_path):

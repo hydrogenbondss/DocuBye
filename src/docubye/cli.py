@@ -67,8 +67,19 @@ def _resume(args: argparse.Namespace) -> None:
         stored = resume_paused_task(
             store, args.task_id, args.note, human_confirmed=args.confirm_human_resolution
         )
-        print(f"Task resumed to {stored.task.status.value}. Re-run the workflow to re-inspect and review before any submission.")
-        print(json.dumps(stored.task.to_public_dict(), indent=2))
+        print(f"Task {stored.task.task_id} resumed; continuing with fresh inspection and review.")
+        with running_mock_site(args.scenario, state_path=args.fixture_state) as (base_url, state):
+            print(f"DocuBye mock site: {base_url}")
+            result = MockRemovalAgent(planner=RuleBasedPlanner(), headless=not args.headed).run(
+                base_url=base_url,
+                profile=SyntheticProfile(),
+                approval_callback=_approval_prompt,
+                store=store,
+                task=stored.task,
+            )
+            print("\nResult: " + result.message)
+            print(json.dumps(result.task.to_public_dict(), indent=2))
+            print(f"Synthetic fixture submissions: {state.submission_count}")
     finally:
         store.close()
 
@@ -114,6 +125,12 @@ def main() -> None:
         "--confirm-human-resolution", action="store_true",
         help="Confirm a person resolved the blocking step; required to resume",
     )
+    resume_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
+    resume_parser.add_argument(
+        "--fixture-state", default="docubye-fixture-state.json",
+        help="Mock-site state file written by the original `docubye run`",
+    )
+    resume_parser.add_argument("--headed", action="store_true", help="Show the local browser window")
     resume_parser.set_defaults(handler=_resume)
 
     # Backwards-compatible default: `docubye --scenario normal` still runs the demo.

@@ -58,6 +58,14 @@ def test_payload_fingerprint_binds_the_exact_payload():
     assert payload_fingerprint_for_payload(payload) != payload_fingerprint_for_payload(changed)
 
 
+def test_awaiting_user_cannot_bypass_resume_back_to_ready_for_review():
+    task = TaskRecord()
+    task.transition(TaskStatus.READY_FOR_REVIEW, "review prepared")
+    task.transition(TaskStatus.AWAITING_USER, "waiting for explicit approval")
+    with pytest.raises(ValueError, match="Invalid task transition"):
+        task.transition(TaskStatus.READY_FOR_REVIEW, "bypass the human-resolution gate")
+
+
 def test_resume_requires_a_paused_task_and_a_redacted_note():
     task = TaskRecord()
     with pytest.raises(ValueError, match="Only paused tasks"):

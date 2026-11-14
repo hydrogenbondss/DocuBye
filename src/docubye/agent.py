@@ -76,6 +76,7 @@ class MockRemovalAgent:
         profile: SyntheticProfile,
         approval_callback: Callable[[ReviewSummary], bool | None],
         store: TaskStore | None = None,
+        task: TaskRecord | None = None,
     ) -> RunResult:
         if profile != SyntheticProfile():
             raise ValueError(
@@ -88,7 +89,13 @@ class MockRemovalAgent:
             raise RuntimeError("Install dependencies with: pip install -e '.[dev]'") from exc
 
         origin = validate_local_base_url(base_url)
-        task = TaskRecord()
+        if task is None:
+            task = TaskRecord()
+        elif task.status is not TaskStatus.DISCOVERED:
+            # A resumed task re-enters here from DISCOVERED so it is re-inspected
+            # and freshly reviewed under the same task ID; any other state must
+            # not start a workflow.
+            raise ValueError(f"Only a DISCOVERED task can start the workflow; this task is {task.status.value}")
         if store is not None:
             task.add_listener(store.save_task)
             store.save_task(task)

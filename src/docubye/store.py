@@ -132,18 +132,25 @@ class TaskStore:
         )
 
     def record_approval(self, task_id: str, submission_key: str, payload_fingerprint: str) -> None:
-        """Persist an approval bound to this task's random submission key before submitting."""
+        """Persist an approval bound to this task's random submission key before submitting.
+
+        Only a task with no prior decision can be approved: rejection is
+        terminal, and a consumed approval can never be replaced. Either way a
+        fresh task with a fresh review is required.
+        """
         with self._db:
             cursor = self._db.execute(
                 """
                 UPDATE tasks SET approval_state = ?, submission_key = ?, payload_fingerprint = ?, updated_at = ?
-                WHERE task_id = ? AND approval_state IN (?, ?)
+                WHERE task_id = ? AND approval_state = ?
                 """,
                 (ApprovalState.APPROVED.value, submission_key, payload_fingerprint, _now(), task_id,
-                 ApprovalState.NONE.value, ApprovalState.REJECTED.value),
+                 ApprovalState.NONE.value),
             )
         if cursor.rowcount != 1:
-            raise PermissionError(f"Task {task_id} already has a consumed approval; refusing a new one")
+            raise PermissionError(
+                f"Task {task_id} already has a consumed or rejected decision; refusing a new approval"
+            )
 
     def record_rejection(self, task_id: str) -> None:
         with self._db:

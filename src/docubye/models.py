@@ -28,9 +28,10 @@ class TaskStatus(StrEnum):
 _ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.DISCOVERED: {TaskStatus.READY_FOR_REVIEW, TaskStatus.AWAITING_USER, TaskStatus.FAILED},
     TaskStatus.READY_FOR_REVIEW: {TaskStatus.AWAITING_USER, TaskStatus.SUBMITTING, TaskStatus.REJECTED, TaskStatus.FAILED},
-    # AWAITING_USER may return to DISCOVERED only through resume(), which forces
-    # a fresh inspection and review. It can never resume directly into SUBMITTING.
-    TaskStatus.AWAITING_USER: {TaskStatus.DISCOVERED, TaskStatus.READY_FOR_REVIEW, TaskStatus.REJECTED, TaskStatus.FAILED},
+    # AWAITING_USER may leave only through resume() (to DISCOVERED, forcing fresh
+    # inspection and review), REJECTED, or FAILED. There is no direct path back
+    # to READY_FOR_REVIEW: caller code cannot bypass the human-resolution gate.
+    TaskStatus.AWAITING_USER: {TaskStatus.DISCOVERED, TaskStatus.REJECTED, TaskStatus.FAILED},
     TaskStatus.SUBMITTING: {TaskStatus.SUBMITTED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.SUBMITTED: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
