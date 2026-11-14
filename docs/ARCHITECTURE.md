@@ -27,7 +27,7 @@ The guard is intended for a controlled local fixture. It is not a production-gra
 
 ### 3. Form planner
 
-The planner module defines a protocol and an offline, deterministic rule-based mapping. The deterministic path is the milestone baseline: it must be proven before any model-assisted variant is considered. A model-assisted mapper, if reintroduced, must receive only field metadata (name, label, input type, required flag), never profile values, cookies, or credentials, and its output must be validated against an allowlist. Any future AI-navigation layer must remain behind an independently enforced navigation boundary.
+The planner module defines a protocol and an offline, deterministic rule-based mapping. The deterministic path is the milestone baseline: it must be proven before any model-assisted variant is considered. This branch adds the optional OpenAI Responses API mapper on top of that baseline. The model receives only field metadata (name, label, input type, required flag), never profile values, cookies, or credentials, and its output is parsed and validated against an allowlist of input names and canonical profile fields. The model does not have browser tools, cannot choose a destination, and cannot approve a submission. Any future AI-navigation layer must remain behind an independently enforced navigation boundary.
 
 ### 4. Synthetic mock site
 

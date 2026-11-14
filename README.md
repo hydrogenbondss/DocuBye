@@ -55,6 +55,17 @@ The CLI prints a recovery command with the task ID. Run it to perform a read-onl
 
 Recovery finds the original submission, records its confirmation ID, and moves the task to awaiting_confirmation without sending a second request. Nothing ever resubmits automatically.
 
+## Optional AI field mapping
+
+The default rules planner is offline and deterministic; this branch adds an opt-in model-assisted mapper on top of the proven baseline. To exercise it, install the extra and configure a provider explicitly:
+
+    python -m pip install -e '.[ai]'
+    export DOCUBYE_OPENAI_API_KEY='your-key'
+    export DOCUBYE_OPENAI_MODEL='your-chosen-model'
+    docubye run --planner openai --scenario normal
+
+The model receives only input names, field labels, types, and required flags. The profile's name, email, phone number, browser cookies, and credentials are not included in the model request, and model output is validated against the allowed field schema. Remote inference is still a network call, so choose the provider deliberately. The approval gate, request guard, and recovery semantics are identical for both planners.
+
 ## Principles
 
 - Work only on the user's own information or information they are authorised to manage.

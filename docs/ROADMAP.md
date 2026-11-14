@@ -35,6 +35,10 @@ _Amendment (PR #2 review): recovery and persistence requirements added explicitl
 - [x] Keep approvals single-use across process restarts.
 - [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
+_Amendment (openai-field-planner branch): optional model-assisted field mapping, proposed only after the deterministic baseline passed._
+
+- [x] Add an optional model-backed field mapper that receives only form metadata and validates its output.
+
 **Exit criteria:** Repeatable automated tests prove the permission gates and state machine work. Screenshots or logs do not leak personal values.
 
 ## Milestone 2 — First real source

@@ -9,7 +9,7 @@ import sys
 from .agent import MockRemovalAgent, ReviewSummary, recover_submission
 from .mock_site import running_mock_site
 from .models import SyntheticProfile
-from .planner import RuleBasedPlanner
+from .planner import OpenAIFieldPlanner, RuleBasedPlanner
 from .store import TaskStore
 
 SCENARIOS = ["normal", "challenge", "unexpected", "verified", "early-submit", "timeout-after-submit"]
@@ -31,7 +31,8 @@ def _run(args: argparse.Namespace) -> None:
             print(f"DocuBye mock site: {base_url}")
             print(f"Task store: {args.store}")
             print("Local synthetic data only. No real removal site will be contacted.")
-            result = MockRemovalAgent(planner=RuleBasedPlanner(), headless=not args.headed).run(
+            planner = OpenAIFieldPlanner() if args.planner == "openai" else RuleBasedPlanner()
+            result = MockRemovalAgent(planner=planner, headless=not args.headed).run(
                 base_url=base_url,
                 profile=SyntheticProfile(),
                 approval_callback=_approval_prompt,
@@ -67,6 +68,7 @@ def main() -> None:
 
     run_parser = subparsers.add_parser("run", help="Run the synthetic removal workflow")
     run_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
+    run_parser.add_argument("--planner", choices=["rules", "openai"], default="rules")
     run_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
     run_parser.add_argument(
         "--fixture-state", default="docubye-fixture-state.json",
