@@ -1,6 +1,6 @@
 # Architecture proposal
 
-**Status:** Synthetic workflow implemented; live-site integration remains blocked on a broader security review.
+**Status:** Synthetic workflow implemented with durable, restart-safe recovery. Live-site integration remains blocked on a broader security review; first-source research and model-assisted field mapping live on separate draft branches.
 
 ## Design goal
 
@@ -10,7 +10,7 @@ Make browser automation reliable enough for privacy-sensitive workflows without 
 
 ### 1. Workflow controller
 
-The agent module owns the permitted workflow. It accepts only the exact 127.0.0.1 loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. The model does not decide whether the submission gate is open.
+The agent module owns the permitted workflow. It accepts only the exact 127.0.0.1 loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. No model decides whether the submission gate is open.
 
 ### 2. Browser driver and request guard
 
@@ -27,36 +27,33 @@ The guard is intended for a controlled local fixture. It is not a production-gra
 
 ### 3. Form planner
 
-The planner module defines a protocol, an offline deterministic mapping, and an optional OpenAI Responses API mapper. The model receives only field metadata (name, label, input type, and required flag), never the profile's name, email, phone, cookies, or credentials. Model output is parsed and validated against an allowlist of input names and canonical profile fields.
-
-AI is deliberately constrained to mapping fields in this milestone. It does not have arbitrary browser tools, cannot choose a destination, and cannot approve a submission. A future AI-navigation layer must remain behind an independently enforced navigation boundary.
+The planner module defines a protocol and an offline, deterministic rule-based mapping. The deterministic path is the milestone baseline: it must be proven before any model-assisted variant is considered. A model-assisted mapper, if reintroduced, must receive only field metadata (name, label, input type, required flag), never profile values, cookies, or credentials, and its output must be validated against an allowlist. Any future AI-navigation layer must remain behind an independently enforced navigation boundary.
 
 ### 4. Synthetic mock site
 
-The mock-site module serves the form and scenarios for human verification, unexpected requests, pre-approval submission, outbound requests, redirects, popups, external frames, changed form destinations, changed payloads, and duplicate attempts after approval. All test personal data is synthetic.
+The mock-site module serves the form and scenarios for human verification, unexpected requests, pre-approval submission, outbound requests, redirects, popups, external frames, changed form destinations, changed payloads, duplicate attempts after approval, and an acknowledgement timeout after a recorded POST. All test personal data is synthetic and loaded from a fixture file.
 
-### 5. Task state and evidence
+Submissions are idempotent: the mock derives a submission key from the exact form payload, issues a confirmation ID once per key, and replays the same confirmation for repeated POSTs without counting them twice. A read-only /status endpoint looks up submissions by key, which is what makes recovery without resubmission possible.
+
+### 5. Task state, persistence, and recovery
 
 The models module implements a typed state machine and a one-time submission-attempt guard. Public task records contain timestamps, generic action descriptions, status, and a task ID—not profile values or full page content. The verified-removed state is only reached when the fixture's separate verification endpoint confirms removal.
 
-### 6. Google contact-info request contract and inspector
+The store module persists each task in SQLite: task ID, full event history, approval state, submission (idempotency) key, and confirmation ID. Approval consumption is atomic and survives process restarts, so an approval can never be used twice, even by a new process reopening the same store file.
 
-The source module validates a draft for the limited address/phone/email Search-removal branch and prepares a full user review plus a redacted audit record. Its approval token is bound to the request fingerprint and is consumed on the first attempt, including a mismatch. It still does not submit a request or establish that Google's dynamic form has been mapped.
-
-The docubye-inspect-google-form command uses a fresh browser context and collects visible field metadata without input values. Automatic mode stops if a CAPTCHA is visible. The optional --headed --human-handoff mode pauses for a person to observe the public wizard. It records selected radio labels and non-sensitive field metadata after the person returns, while retaining the same strict network policy: HTTPS GET/HEAD requests to approved hosts only; no non-GET methods, external hosts, WebSockets, or known submission paths. Query strings and fragments are excluded from report URLs. If a challenge or Next step needs a blocked request, the wizard cannot progress and remains unverified. This is not a CAPTCHA workaround, not a production browser sandbox, and not a live removal adapter.
+An interrupted submission ends in UNKNOWN. The only exit from UNKNOWN is the recovery path: a read-only GET to the mock /status endpoint with the persisted idempotency key. If the original submission is found, its confirmation ID is recorded and the task moves to awaiting_confirmation. Automatic blind retry is disabled; recovery never sends a second POST.
 
 ## Proposed tools
 
 - Python 3.11+
 - Playwright for browser control and end-to-end testing
 - pytest for workflow and safety tests
-- SQLite later, once task records need persistence; current task state is in memory
-- Optional OpenAI SDK for model-assisted field mapping
+- SQLite (standard library) for task persistence
+- See the [stack decision record](STACK_DECISION.md) for deliberate deviations and their rationale.
 
 ## Before connecting to a real source
 
-1. Verify CI for the full browser suite after the expanded request-guard tests.
-2. Review and test redirects, popup tabs, frames, downloads, browser protocols, request bodies, and navigation changes.
-3. Choose one official removal workflow and document its terms, eligibility, required fields, verification method, and human checkpoints.
-4. Implement a source-specific adapter rather than allowing arbitrary model-generated clicks.
-5. Keep pre-submission review and explicit approval enabled until the integration has adequate safety evidence.
+1. Review and test redirects, popup tabs, frames, downloads, browser protocols, request bodies, and navigation changes.
+2. Choose one official removal workflow and document its terms, eligibility, required fields, verification method, and human checkpoints.
+3. Implement a source-specific adapter rather than allowing arbitrary model-generated clicks.
+4. Keep pre-submission review and explicit approval enabled until the integration has adequate safety evidence.

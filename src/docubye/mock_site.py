@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from urllib.parse import parse_qs, urlparse
+
+from .models import submission_key_for_payload
 
 
 @dataclass
@@ -14,6 +17,34 @@ class MockSiteState:
     scenario: str = "normal"
     submission_count: int = 0
     last_submitted_fields: dict[str, str] = field(default_factory=dict)
+    # Idempotency records: submission key -> confirmation ID. A repeated POST
+    # with the same key returns the original confirmation without counting twice.
+    confirmations: dict[str, str] = field(default_factory=dict)
+    # Optional JSON file backing, so the CLI demo can recover across processes.
+    state_path: str | None = None
+
+    def persist(self) -> None:
+        if not self.state_path:
+            return
+        payload = {
+            "submission_count": self.submission_count,
+            "last_submitted_fields": self.last_submitted_fields,
+            "confirmations": self.confirmations,
+        }
+        with open(self.state_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle)
+
+    def restore(self) -> None:
+        if not self.state_path:
+            return
+        try:
+            with open(self.state_path, encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except (OSError, ValueError):
+            return
+        self.submission_count = int(payload.get("submission_count", 0))
+        self.last_submitted_fields = dict(payload.get("last_submitted_fields", {}))
+        self.confirmations = dict(payload.get("confirmations", {}))
 
 
 OPT_OUT_HTML = """<!doctype html>
@@ -106,6 +137,15 @@ class _Handler(BaseHTTPRequestHandler):
             else:
                 body = OPT_OUT_HTML
             self._send(200, body)
+        elif path == "/status":
+            key = parse_qs(urlparse(self.path).query).get("key", [""])[0]
+            found = key in self.server.state.confirmations
+            payload = {
+                "found": found,
+                "confirmation_id": self.server.state.confirmations.get(key),
+                "submission_count": self.server.state.submission_count,
+            }
+            self._send(200, json.dumps(payload), content_type="application/json")
         elif path == "/verify":
             if scenario == "verified" and self.server.state.submission_count > 0:
                 self._send(200, '<!doctype html><h1 data-testid="verification-result">Removal verified</h1>')
@@ -129,10 +169,28 @@ class _Handler(BaseHTTPRequestHandler):
         if not expected.issubset(form) or form["confirm_own_data"] != "on":
             self._send(400, '<!doctype html><h1>Required fields missing</h1>')
             return
-        self.server.state.submission_count += 1
-        self.server.state.last_submitted_fields = {key: form[key] for key in ("full_name", "email", "phone")}
-        response = '<!doctype html><h1 data-testid="submitted">Request received</h1><p>This acknowledgement is not confirmation of deletion.</p>'
-        if self.server.state.scenario == "duplicate-after-submit":
+        state = self.server.state
+        key = submission_key_for_payload(form)
+        if key in state.confirmations:
+            # Idempotent replay: return the original confirmation, count nothing twice.
+            confirmation_id = state.confirmations[key]
+        else:
+            state.submission_count += 1
+            confirmation_id = f"mock-confirmation-{state.submission_count:04d}"
+            state.confirmations[key] = confirmation_id
+            state.last_submitted_fields = {field_name: form[field_name] for field_name in ("full_name", "email", "phone")}
+            state.persist()
+        if state.scenario == "timeout-after-submit":
+            # The POST is recorded, but the acknowledgement marker never appears,
+            # so the browser-side wait times out with the submission unresolved.
+            self._send(200, '<!doctype html><h1>Processing</h1><p>Acknowledgement marker withheld in this scenario.</p>')
+            return
+        response = (
+            '<!doctype html><h1 data-testid="submitted">Request received</h1>'
+            f'<p data-testid="confirmation-id">{confirmation_id}</p>'
+            '<p>This acknowledgement is not confirmation of deletion.</p>'
+        )
+        if state.scenario == "duplicate-after-submit":
             response = response.replace(
                 "</p>",
                 '</p><script>fetch("/submit", {method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, '
@@ -151,15 +209,16 @@ class _MockHTTPServer(ThreadingHTTPServer):
 
 
 @contextmanager
-def running_mock_site(scenario: str = "normal"):
+def running_mock_site(scenario: str = "normal", state_path: str | None = None):
     allowed = {
         "normal", "challenge", "unexpected", "verified", "early-submit",
         "external-request", "external-redirect", "external-popup", "external-frame", "external-websocket",
-        "bad-form-action", "mutate-before-submit", "duplicate-after-submit",
+        "bad-form-action", "mutate-before-submit", "duplicate-after-submit", "timeout-after-submit",
     }
     if scenario not in allowed:
         raise ValueError(f"Unsupported mock scenario: {scenario}")
-    state = MockSiteState(scenario=scenario)
+    state = MockSiteState(scenario=scenario, state_path=state_path)
+    state.restore()
     server = _MockHTTPServer(("127.0.0.1", 0), state)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()

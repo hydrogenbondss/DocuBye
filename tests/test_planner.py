@@ -1,9 +1,9 @@
-import pytest
-
-from docubye.planner import FormField, OpenAIFieldPlanner, RuleBasedPlanner
+from docubye.planner import RuleBasedPlanner
 
 
 def fixture_fields():
+    from docubye.planner import FormField
+
     return [
         FormField("full_name", "Full name", "text", True),
         FormField("email", "Email address", "email", True),
@@ -22,14 +22,9 @@ def test_rule_based_planner_maps_known_fields():
 
 
 def test_rule_based_planner_pauses_for_unknown_required_field():
+    from docubye.planner import FormField
+
     fields = fixture_fields() + [FormField("government_id", "Government ID", "text", True)]
     result = RuleBasedPlanner().map_fields(fields)
     assert result.needs_human_help
     assert result.mapping == {}
-
-
-def test_ai_planner_requires_explicit_credentials_and_model(monkeypatch):
-    monkeypatch.delenv("DOCUBYE_OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("DOCUBYE_OPENAI_MODEL", raising=False)
-    with pytest.raises(RuntimeError, match="DOCUBYE_OPENAI_API_KEY"):
-        OpenAIFieldPlanner()

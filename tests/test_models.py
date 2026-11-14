@@ -1,6 +1,8 @@
+import json
+
 import pytest
 
-from docubye.models import TaskRecord, TaskStatus
+from docubye.models import SyntheticProfile, TaskRecord, TaskStatus, submission_key_for_payload
 
 
 def test_task_rejects_invalid_transition():
@@ -23,3 +25,34 @@ def test_public_task_record_does_not_include_profile_values():
     assert "email" not in payload
     assert "profile" not in payload
     assert payload["status"] == "discovered"
+
+
+def test_synthetic_profile_loads_from_the_fixture_file():
+    from importlib import resources
+
+    fixture = json.loads(
+        resources.files("docubye.fixtures").joinpath("synthetic_profile.json").read_text(encoding="utf-8")
+    )
+    profile = SyntheticProfile()
+    assert profile.full_name == fixture["full_name"]
+    assert profile.email == fixture["email"]
+    assert profile.phone == fixture["phone"]
+    assert fixture["email"].endswith(".test")
+
+
+def test_unknown_can_only_recover_to_awaiting_confirmation():
+    task = TaskRecord()
+    task.transition(TaskStatus.READY_FOR_REVIEW, "review prepared")
+    task.begin_submission()
+    task.transition(TaskStatus.UNKNOWN, "submission outcome unresolved")
+    with pytest.raises(ValueError, match="Invalid task transition"):
+        task.transition(TaskStatus.SUBMITTING, "blind retry stays disabled")
+    task.transition(TaskStatus.AWAITING_CONFIRMATION, "original submission found via status lookup")
+
+
+def test_submission_key_binds_the_exact_payload():
+    payload = {"full_name": "Alex Example", "email": "alex.example@example.test", "phone": "+1 202 555 0147", "confirm_own_data": "on"}
+    same = dict(reversed(list(payload.items())))
+    assert submission_key_for_payload(payload) == submission_key_for_payload(same)
+    changed = {**payload, "email": "other@example.test"}
+    assert submission_key_for_payload(payload) != submission_key_for_payload(changed)

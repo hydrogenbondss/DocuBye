@@ -14,14 +14,15 @@ dependencies = ["playwright>=1.50,<2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
-ai = ["openai>=1.70"]
 
 [project.scripts]
 docubye = "docubye.cli:main"
-docubye-inspect-google-form = "docubye.google_inspect:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"docubye.fixtures" = ["*.json"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"

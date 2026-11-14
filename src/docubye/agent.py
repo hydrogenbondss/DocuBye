@@ -9,9 +9,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 from urllib.parse import parse_qs, urlsplit
+from urllib.request import urlopen
 
-from .models import SyntheticProfile, TaskRecord, TaskStatus
+from .models import SyntheticProfile, TaskRecord, TaskStatus, submission_key_for_payload
 from .planner import FieldPlanner, FormField, RuleBasedPlanner
+from .store import StoredTask, TaskStore
 
 ALLOWED_FORM_FIELDS = {"full_name", "email", "phone", "confirm_own_data"}
 ALLOWED_INPUT_TYPES = {"text", "email", "tel", "checkbox"}
@@ -72,6 +74,7 @@ class MockRemovalAgent:
         base_url: str,
         profile: SyntheticProfile,
         approval_callback: Callable[[ReviewSummary], bool | None],
+        store: TaskStore | None = None,
     ) -> RunResult:
         if profile != SyntheticProfile():
             raise ValueError(
@@ -85,6 +88,9 @@ class MockRemovalAgent:
 
         origin = validate_local_base_url(base_url)
         task = TaskRecord()
+        if store is not None:
+            task.add_listener(store.save_task)
+            store.save_task(task)
         blocked_hosts: list[str] = []
         blocked_requests: list[str] = []
         submission_approved = False
@@ -304,14 +310,36 @@ class MockRemovalAgent:
                     task.transition(TaskStatus.AWAITING_USER, "Waiting for explicit approval")
                     return make_result("Waiting for the user; no submission was made.", review)
                 if decision is not True:
+                    if store is not None:
+                        store.record_rejection(task.task_id)
                     task.transition(TaskStatus.REJECTED, "User rejected submission")
                     return make_result("The user rejected the submission; nothing was sent.", review)
 
+                flat_payload = {name: values[0] for name, values in expected_submission_payload.items()}
+                submission_key = submission_key_for_payload(flat_payload)
+                if store is not None:
+                    store.record_approval(task.task_id, submission_key)
                 task.begin_submission()
+                if store is not None:
+                    try:
+                        store.consume_approval(task.task_id, submission_key)
+                    except PermissionError:
+                        task.transition(
+                            TaskStatus.FAILED,
+                            "Approval was already consumed; recover the original submission instead of retrying",
+                        )
+                        return make_result(
+                            "This task's approval was already used, possibly before a restart. "
+                            "Recover the original submission instead of submitting again.",
+                            review,
+                        )
                 submission_approved = True
                 try:
                     submit_button.click()
                     page.get_by_test_id("submitted").wait_for(state="visible")
+                    if store is not None:
+                        confirmation_id = page.get_by_test_id("confirmation-id").inner_text().strip()
+                        store.record_confirmation_id(task.task_id, confirmation_id)
                 except PlaywrightError:
                     if not submission_forwarded and blocked_submission_count > 0:
                         task.transition(TaskStatus.FAILED, "Submission blocked before reaching the mock endpoint")
@@ -359,3 +387,32 @@ class MockRemovalAgent:
             finally:
                 context.close()
                 browser.close()
+
+
+def recover_submission(base_url: str, store: TaskStore, task_id: str, timeout: float = 5.0) -> StoredTask:
+    """Resolve an UNKNOWN task by looking up the original submission.
+
+    This is the only way out of UNKNOWN: a read-only status lookup by the
+    persisted idempotency key. It never resubmits and never retries blindly.
+    """
+    origin = validate_local_base_url(base_url)
+    stored = store.load_task(task_id)
+    task = stored.task
+    if task.status is not TaskStatus.UNKNOWN:
+        raise ValueError(f"Only UNKNOWN tasks need recovery; this task is {task.status.value}")
+    if not stored.submission_key:
+        raise ValueError("No submission key was persisted; there is nothing safe to recover")
+
+    status_url = f"{origin}/status?key={stored.submission_key}"
+    with urlopen(status_url, timeout=timeout) as response:  # noqa: S310 - origin is pinned to 127.0.0.1 above
+        outcome = json.loads(response.read().decode("utf-8"))
+
+    confirmation_id = outcome.get("confirmation_id") if outcome.get("found") is True else None
+    if confirmation_id:
+        store.record_confirmation_id(task_id, str(confirmation_id))
+        task.transition(
+            TaskStatus.AWAITING_CONFIRMATION,
+            "Recovered the original submission via status lookup; no second request was sent",
+        )
+        store.save_task(task)
+    return store.load_task(task_id)
