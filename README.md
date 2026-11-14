@@ -55,6 +55,14 @@ The CLI prints a recovery command with the task ID. Run it to perform a read-onl
 
 Recovery finds the original submission, records its confirmation ID, and moves the task to awaiting_confirmation without sending a second request. Nothing ever resubmits automatically.
 
+## Resuming a paused task
+
+When the workflow pauses (awaiting_user), for example at a simulated verification challenge, a person must resolve the blocking step first. Resuming then continues the same task under the same task ID:
+
+    docubye resume <task-id> --note "Operator cleared the simulated check" --confirm-human-resolution
+
+The note is redacted and recorded in the task history. The resumed task is re-inspected and freshly reviewed; it can never resume into submission, and rejection is terminal — a rejected task requires a fresh task.
+
 ## Principles
 
 - Work only on the user's own information or information they are authorised to manage.
