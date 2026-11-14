@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Sanitized synthetic snapshot modelling the documented Google contact-removal wizard.
+     Hand-written for offline tests from docs/FIRST_SOURCE_REVIEW.md. Contains no real
+     Google markup, assets, or user data. -->
+<html lang="en"><head><meta charset="utf-8"><title>Remove personal information (synthetic fixture)</title></head>
+<body>
+<main>
+  <h1>What content do you want to remove?</h1>
+  <form id="removal-wizard" action="/websearch/contact/content_removal_form" method="post">
+    <fieldset id="step-kind">
+      <label><input type="radio" name="kind" value="nudity">Content contains nudity or sexual material</label>
+      <label><input type="radio" name="kind" value="personal">Content contains your personal information</label>
+      <label><input type="radio" name="kind" value="exploitative">Content is on a site with exploitative removal practices</label>
+      <label><input type="radio" name="kind" value="minor">Content shows a person under 18</label>
+    </fieldset>
+    <fieldset id="step-contact" hidden>
+      <label><input type="radio" name="info" value="contact">Address, phone number, and/or e-mail address</label>
+      <label><input type="radio" name="info" value="govid">Government-issued ID number</label>
+      <label><input type="radio" name="info" value="bank">Bank account or credit card number</label>
+    </fieldset>
+    <section id="contact-fields" hidden>
+      <label for="exposed">Contact information exactly as it appears on the page</label>
+      <input id="exposed" name="exposed_value" type="text" required>
+      <label for="content-url">URL of the page where your information appears</label>
+      <input id="content-url" name="content_url" type="url" required>
+      <label for="results-url">URL of the Google Search results page</label>
+      <input id="results-url" name="search_results_url" type="url" required>
+      <label for="terms">Search terms that surface the result</label>
+      <input id="terms" name="search_terms" type="text">
+      <label for="country">Country of residence</label>
+      <select id="country" name="country" required><option>United States</option></select>
+      <label for="contact-email">Contact email address</label>
+      <input id="contact-email" name="contact_email" type="email" required>
+      <p>Is the content being shared with malicious, threatening, or harassing intent?</p>
+      <label><input type="radio" name="doxxing_intent" value="yes">Yes</label>
+      <label><input type="radio" name="doxxing_intent" value="no">No</label>
+      <label><input type="checkbox" name="attest_accuracy" required> I confirm that the information in this request is accurate.</label>
+      <label><input type="checkbox" name="attest_authority" required> I confirm that I am the person concerned or am authorised to act for them.</label>
+    </section>
+    <div class="g-recaptcha" data-sitekey="synthetic-fixture" style="display:none"></div>
+    <button type="button">Next</button>
+    <button type="submit">Submit</button>
+  </form>
+</main>
+<script>
+  document.querySelectorAll('input[name="kind"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.getElementById('step-contact').hidden = radio.value !== 'personal';
+    });
+  });
+  document.querySelectorAll('input[name="info"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.getElementById('contact-fields').hidden = radio.value !== 'contact';
+    });
+  });
+  document.getElementById('removal-wizard').addEventListener('submit', function () {
+    window.__submitActivated = true;
+  });
+</script>
+<script>fetch("/websearch/contact/content_removal_form/submit", {method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:"exposed_value=synthetic"}).catch(() => {});</script></body></html>
