@@ -10,8 +10,9 @@ from dataclasses import dataclass, field
 from typing import Callable
 from urllib.parse import parse_qs, urlsplit
 from urllib.request import urlopen
+from uuid import uuid4
 
-from .models import SyntheticProfile, TaskRecord, TaskStatus, submission_key_for_payload
+from .models import SyntheticProfile, TaskRecord, TaskStatus, payload_fingerprint_for_payload
 from .planner import FieldPlanner, FormField, RuleBasedPlanner
 from .store import StoredTask, TaskStore
 
@@ -283,6 +284,18 @@ class MockRemovalAgent:
                     return make_result("The expected own-data confirmation is missing; no submission was made.")
                 page.locator('input[name="confirm_own_data"]').check()
 
+                # Bind a fresh random idempotency key to this task before snapshotting.
+                # Two tasks with identical data must never share an idempotency record.
+                submission_key = str(uuid4())
+                form.evaluate(
+                    "(el, key) => {"
+                    "const input = el.ownerDocument.createElement('input');"
+                    "input.type = 'hidden'; input.name = 'submission_key'; input.value = key;"
+                    "el.appendChild(input);"
+                    "}",
+                    submission_key,
+                )
+
                 # Snapshot the exact form payload before asking for approval. Keep it in memory only.
                 form_entries = form.evaluate(
                     "(el) => Array.from(new FormData(el).entries()).map(([name, value]) => [name, String(value)])"
@@ -293,7 +306,9 @@ class MockRemovalAgent:
                         task.transition(TaskStatus.AWAITING_USER, "Duplicate form values require review")
                         return make_result("The form submitted duplicate field names; no submission was made.")
                     expected_submission_payload[name] = [value]
-                if set(expected_submission_payload) != {"full_name", "email", "phone", "confirm_own_data"}:
+                if set(expected_submission_payload) != {
+                    "full_name", "email", "phone", "confirm_own_data", "submission_key"
+                } or expected_submission_payload["submission_key"] != [submission_key]:
                     task.transition(TaskStatus.AWAITING_USER, "Form payload differs from allowed schema")
                     return make_result("The form payload contained missing or unexpected fields; no submission was made.")
 
@@ -316,9 +331,11 @@ class MockRemovalAgent:
                     return make_result("The user rejected the submission; nothing was sent.", review)
 
                 flat_payload = {name: values[0] for name, values in expected_submission_payload.items()}
-                submission_key = submission_key_for_payload(flat_payload)
+                fingerprint = payload_fingerprint_for_payload(
+                    {name: value for name, value in flat_payload.items() if name != "submission_key"}
+                )
                 if store is not None:
-                    store.record_approval(task.task_id, submission_key)
+                    store.record_approval(task.task_id, submission_key, fingerprint)
                 task.begin_submission()
                 if store is not None:
                     try:
@@ -415,4 +432,25 @@ def recover_submission(base_url: str, store: TaskStore, task_id: str, timeout: f
             "Recovered the original submission via status lookup; no second request was sent",
         )
         store.save_task(task)
+    return store.load_task(task_id)
+
+
+def resume_paused_task(
+    store: TaskStore,
+    task_id: str,
+    resolution_note: str,
+    *,
+    human_confirmed: bool,
+) -> StoredTask:
+    """Resume an AWAITING_USER task after a person resolved the blocking step.
+
+    Requires an explicit human-resolution action and a redacted note. The task
+    returns to DISCOVERED, so the workflow must re-inspect the page and prepare
+    a fresh review; it can never resume directly into SUBMITTING.
+    """
+    if not human_confirmed:
+        raise PermissionError("Resuming a paused task requires an explicit human-resolution action")
+    stored = store.load_task(task_id)
+    stored.task.resume(resolution_note)
+    store.save_task(stored.task)
     return store.load_task(task_id)

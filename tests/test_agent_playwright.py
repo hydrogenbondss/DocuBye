@@ -1,6 +1,6 @@
 import pytest
 
-from docubye.agent import MockRemovalAgent, recover_submission, validate_local_base_url
+from docubye.agent import MockRemovalAgent, recover_submission, resume_paused_task, validate_local_base_url
 from docubye.mock_site import running_mock_site
 from docubye.models import SyntheticProfile, TaskStatus
 from docubye.store import ApprovalState, TaskStore
@@ -203,3 +203,50 @@ def test_paused_awaiting_user_task_resumes_with_history_and_cannot_submit(chromi
         with pytest.raises(ValueError, match="not ready for approved submission"):
             stored.task.begin_submission()
         assert state.submission_count == 0
+
+
+def test_paused_task_resumes_only_after_human_resolution(chromium, tmp_path):
+    store_path = tmp_path / "tasks.sqlite3"
+    with running_mock_site("challenge") as (base_url, state):
+        store = TaskStore(store_path)
+        result = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store)
+        assert result.task.status is TaskStatus.AWAITING_USER
+        store.close()
+
+        with pytest.raises(PermissionError, match="human-resolution"):
+            resume_paused_task(TaskStore(store_path), result.task.task_id, "note", human_confirmed=False)
+
+        resumed = resume_paused_task(
+            TaskStore(store_path),
+            result.task.task_id,
+            "Operator completed the simulated verification step",
+            human_confirmed=True,
+        )
+        # Resume lands on DISCOVERED: re-inspection and a fresh review are required.
+        assert resumed.task.status is TaskStatus.DISCOVERED
+        history = [event.detail for event in resumed.task.events]
+        assert history[: len(result.task.events)] == [event.detail for event in result.task.events]
+        assert "Resumed after human resolution" in history[-1]
+        assert "Operator completed the simulated verification step" in history[-1]
+        # The resumed task cannot submit without a fresh review, and nothing was sent.
+        with pytest.raises(ValueError, match="not ready for approved submission"):
+            resumed.task.begin_submission()
+        assert state.submission_count == 0
+
+
+def test_two_tasks_with_identical_data_get_separate_idempotency_records(chromium, tmp_path):
+    store = TaskStore(tmp_path / "tasks.sqlite3")
+    with running_mock_site("normal") as (base_url, state):
+        first = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store)
+        second = run_agent(base_url, SyntheticProfile(), lambda review: True, store=store)
+        assert first.task.task_id != second.task.task_id
+        assert state.submission_count == 2
+        assert len(state.confirmations) == 2
+
+        stored_first = store.load_task(first.task.task_id)
+        stored_second = store.load_task(second.task.task_id)
+        assert stored_first.submission_key != stored_second.submission_key
+        assert stored_first.confirmation_id != stored_second.confirmation_id
+        # The reviewed data is identical, so the payload fingerprints match;
+        # only the random per-task keys differ.
+        assert stored_first.payload_fingerprint == stored_second.payload_fingerprint

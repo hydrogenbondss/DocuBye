@@ -17,7 +17,7 @@ This roadmap is deliberately evidence-gated. Do not skip ahead based on a succes
 
 ## Milestone 1 — Synthetic browser workflow
 
-**Status:** Complete — synthetic scope only. CI evidence is in the [Actions tab](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml); nothing here demonstrates real-source removal.
+**Status:** Ready for review — synthetic scope only. CI evidence is in the [Actions tab](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml); nothing here demonstrates real-source removal.
 
 - [x] Create a local mock site that represents a typical opt-out form.
 - [x] Create a synthetic profile and a fixture with no real personal information.
@@ -33,12 +33,12 @@ _Amendment (PR #2 review): recovery and persistence requirements added explicitl
 - [x] Persist task state (task ID, approval state, submission key, and confirmation ID) in SQLite.
 - [x] Recover an interrupted (UNKNOWN) submission only via a read-only status lookup by idempotency key; automatic blind retry stays disabled.
 - [x] Keep approvals single-use across process restarts.
-- [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases before a live-site adapter.
 
 **Exit criteria:** Repeatable automated tests prove the permission gates and state machine work. Screenshots or logs do not leak personal values.
 
 ## Milestone 2 — First real source
 
+- [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases (prerequisite for any live adapter; moved here from Milestone 1).
 - [ ] Select one source after reviewing the official removal process, terms, required fields, and verification method.
 - [ ] Implement a narrowly scoped source adapter.
 - [ ] Test on the official workflow without submitting a real user's request.

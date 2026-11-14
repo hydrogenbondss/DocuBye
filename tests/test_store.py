@@ -32,7 +32,7 @@ def test_approval_is_single_use_even_across_process_restarts(tmp_path):
     store = TaskStore(path)
     task = _ready_task()
     store.save_task(task)
-    store.record_approval(task.task_id, "key-1")
+    store.record_approval(task.task_id, "key-1", "fingerprint-1")
     store.consume_approval(task.task_id, "key-1")
     store.close()
 
@@ -41,17 +41,18 @@ def test_approval_is_single_use_even_across_process_restarts(tmp_path):
     with pytest.raises(PermissionError, match="No unused approval"):
         reopened.consume_approval(task.task_id, "key-1")
     with pytest.raises(PermissionError, match="consumed approval"):
-        reopened.record_approval(task.task_id, "key-2")
+        reopened.record_approval(task.task_id, "key-2", "fingerprint-2")
     stored = reopened.load_task(task.task_id)
     assert stored.approval_state is ApprovalState.CONSUMED
     assert stored.submission_key == "key-1"
+    assert stored.payload_fingerprint == "fingerprint-1"
 
 
 def test_a_mismatched_consume_attempt_burns_the_approval(tmp_path):
     store = TaskStore(tmp_path / "tasks.sqlite3")
     task = _ready_task()
     store.save_task(task)
-    store.record_approval(task.task_id, "key-1")
+    store.record_approval(task.task_id, "key-1", "fingerprint-1")
     with pytest.raises(PermissionError, match="does not match"):
         store.consume_approval(task.task_id, "different-key")
     assert store.load_task(task.task_id).approval_state is ApprovalState.CONSUMED

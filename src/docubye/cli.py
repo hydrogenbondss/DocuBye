@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 
-from .agent import MockRemovalAgent, ReviewSummary, recover_submission
+from .agent import MockRemovalAgent, ReviewSummary, recover_submission, resume_paused_task
 from .mock_site import running_mock_site
 from .models import SyntheticProfile
 from .planner import RuleBasedPlanner
@@ -61,6 +61,18 @@ def _recover(args: argparse.Namespace) -> None:
         store.close()
 
 
+def _resume(args: argparse.Namespace) -> None:
+    store = TaskStore(args.store)
+    try:
+        stored = resume_paused_task(
+            store, args.task_id, args.note, human_confirmed=args.confirm_human_resolution
+        )
+        print(f"Task resumed to {stored.task.status.value}. Re-run the workflow to re-inspect and review before any submission.")
+        print(json.dumps(stored.task.to_public_dict(), indent=2))
+    finally:
+        store.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run DocuBye's local synthetic removal demo")
     subparsers = parser.add_subparsers(dest="command")
@@ -88,11 +100,29 @@ def main() -> None:
     recover_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
     recover_parser.set_defaults(handler=_recover)
 
+    resume_parser = subparsers.add_parser(
+        "resume",
+        help="Resume a paused (awaiting_user) task after a person resolved the blocking step",
+    )
+    resume_parser.add_argument("task_id")
+    resume_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    resume_parser.add_argument(
+        "--note", required=True,
+        help="Redacted human-resolution note recorded in the task history (no personal values)",
+    )
+    resume_parser.add_argument(
+        "--confirm-human-resolution", action="store_true",
+        help="Confirm a person resolved the blocking step; required to resume",
+    )
+    resume_parser.set_defaults(handler=_resume)
+
     # Backwards-compatible default: `docubye --scenario normal` still runs the demo.
     argv = sys.argv[1:]
-    if not argv or argv[0] not in {"run", "recover", "-h", "--help"}:
+    if not argv or argv[0] not in {"run", "recover", "resume", "-h", "--help"}:
         argv = ["run", *argv]
     args = parser.parse_args(argv)
+    if args.command == "resume" and not args.confirm_human_resolution:
+        parser.error("resume requires --confirm-human-resolution after a person resolved the blocking step")
     args.handler(args)
 
 

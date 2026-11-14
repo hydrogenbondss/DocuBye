@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from urllib.parse import parse_qs, urlparse
 
-from .models import submission_key_for_payload
+from .models import payload_fingerprint_for_payload
 
 
 @dataclass
@@ -170,7 +170,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(400, '<!doctype html><h1>Required fields missing</h1>')
             return
         state = self.server.state
-        key = submission_key_for_payload(form)
+        # The agent submits its own random per-task key in a hidden field, so two
+        # tasks with identical data keep separate idempotency records. Direct
+        # fixture callers without a key fall back to a payload-derived one.
+        provided_key = form.get("submission_key", "").strip()
+        if provided_key and len(provided_key) <= 64:
+            key = provided_key
+        else:
+            key = payload_fingerprint_for_payload({name: form[name] for name in sorted(expected)})
         if key in state.confirmations:
             # Idempotent replay: return the original confirmation, count nothing twice.
             confirmation_id = state.confirmations[key]

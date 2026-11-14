@@ -28,7 +28,9 @@ class TaskStatus(StrEnum):
 _ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.DISCOVERED: {TaskStatus.READY_FOR_REVIEW, TaskStatus.AWAITING_USER, TaskStatus.FAILED},
     TaskStatus.READY_FOR_REVIEW: {TaskStatus.AWAITING_USER, TaskStatus.SUBMITTING, TaskStatus.REJECTED, TaskStatus.FAILED},
-    TaskStatus.AWAITING_USER: {TaskStatus.READY_FOR_REVIEW, TaskStatus.REJECTED, TaskStatus.FAILED},
+    # AWAITING_USER may return to DISCOVERED only through resume(), which forces
+    # a fresh inspection and review. It can never resume directly into SUBMITTING.
+    TaskStatus.AWAITING_USER: {TaskStatus.DISCOVERED, TaskStatus.READY_FOR_REVIEW, TaskStatus.REJECTED, TaskStatus.FAILED},
     TaskStatus.SUBMITTING: {TaskStatus.SUBMITTED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.SUBMITTED: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
@@ -64,8 +66,12 @@ class SyntheticProfile:
         return {"full_name": self.full_name, "email": self.email, "phone": self.phone}
 
 
-def submission_key_for_payload(payload: Mapping[str, str]) -> str:
-    """Idempotency key binding one submission attempt to its exact reviewed payload."""
+def payload_fingerprint_for_payload(payload: Mapping[str, str]) -> str:
+    """Digest of the exact reviewed payload, for payload-match checking only.
+
+    This is not the idempotency key: each task gets its own random submission
+    key so two tasks with identical data never collapse into one record.
+    """
     canonical = json.dumps(sorted(payload.items()), separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -116,6 +122,22 @@ class TaskRecord:
             raise ValueError("Task is not ready for approved submission")
         self.submission_attempted = True
         self.transition(TaskStatus.SUBMITTING, "Approved submission started")
+
+    def resume(self, resolution_note: str) -> None:
+        """Resume a paused task after a human resolved the blocking step.
+
+        Lands on DISCOVERED so the workflow re-inspects the page and prepares a
+        fresh review; it never resumes into SUBMITTING. The note must be
+        pre-redacted by the caller and is truncated defensively.
+        """
+        if self.status is not TaskStatus.AWAITING_USER:
+            raise ValueError(f"Only paused tasks can resume; this task is {self.status.value}")
+        note = resolution_note.strip()[:160]
+        if not note:
+            raise ValueError("A redacted human-resolution note is required to resume")
+        self.status = TaskStatus.DISCOVERED
+        self.events.append(self._event(f"Resumed after human resolution: {note}"))
+        self._notify()
 
     def to_public_dict(self) -> dict[str, object]:
         """Return an audit record safe for ordinary logs."""

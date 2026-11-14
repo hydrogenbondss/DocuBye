@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     submission_attempted INTEGER NOT NULL DEFAULT 0,
     approval_state TEXT NOT NULL DEFAULT 'none',
     submission_key TEXT,
+    payload_fingerprint TEXT,
     confirmation_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -53,6 +54,7 @@ class StoredTask:
     task: TaskRecord
     approval_state: ApprovalState
     submission_key: str | None
+    payload_fingerprint: str | None
     confirmation_id: str | None
 
 
@@ -70,6 +72,9 @@ class TaskStore:
         self._db.execute("PRAGMA foreign_keys = ON")
         with self._db:
             self._db.executescript(_SCHEMA)
+            columns = {row["name"] for row in self._db.execute("PRAGMA table_info(tasks)")}
+            if "payload_fingerprint" not in columns:
+                self._db.execute("ALTER TABLE tasks ADD COLUMN payload_fingerprint TEXT")
 
     def close(self) -> None:
         self._db.close()
@@ -122,18 +127,19 @@ class TaskStore:
             task=task,
             approval_state=ApprovalState(row["approval_state"]),
             submission_key=row["submission_key"],
+            payload_fingerprint=row["payload_fingerprint"],
             confirmation_id=row["confirmation_id"],
         )
 
-    def record_approval(self, task_id: str, submission_key: str) -> None:
-        """Persist an approval bound to the exact submission key before submitting."""
+    def record_approval(self, task_id: str, submission_key: str, payload_fingerprint: str) -> None:
+        """Persist an approval bound to this task's random submission key before submitting."""
         with self._db:
             cursor = self._db.execute(
                 """
-                UPDATE tasks SET approval_state = ?, submission_key = ?, updated_at = ?
+                UPDATE tasks SET approval_state = ?, submission_key = ?, payload_fingerprint = ?, updated_at = ?
                 WHERE task_id = ? AND approval_state IN (?, ?)
                 """,
-                (ApprovalState.APPROVED.value, submission_key, _now(), task_id,
+                (ApprovalState.APPROVED.value, submission_key, payload_fingerprint, _now(), task_id,
                  ApprovalState.NONE.value, ApprovalState.REJECTED.value),
             )
         if cursor.rowcount != 1:

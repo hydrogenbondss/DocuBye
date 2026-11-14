@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from docubye.models import SyntheticProfile, TaskRecord, TaskStatus, submission_key_for_payload
+from docubye.models import SyntheticProfile, TaskRecord, TaskStatus, payload_fingerprint_for_payload
 
 
 def test_task_rejects_invalid_transition():
@@ -50,9 +50,26 @@ def test_unknown_can_only_recover_to_awaiting_confirmation():
     task.transition(TaskStatus.AWAITING_CONFIRMATION, "original submission found via status lookup")
 
 
-def test_submission_key_binds_the_exact_payload():
+def test_payload_fingerprint_binds_the_exact_payload():
     payload = {"full_name": "Alex Example", "email": "alex.example@example.test", "phone": "+1 202 555 0147", "confirm_own_data": "on"}
     same = dict(reversed(list(payload.items())))
-    assert submission_key_for_payload(payload) == submission_key_for_payload(same)
+    assert payload_fingerprint_for_payload(payload) == payload_fingerprint_for_payload(same)
     changed = {**payload, "email": "other@example.test"}
-    assert submission_key_for_payload(payload) != submission_key_for_payload(changed)
+    assert payload_fingerprint_for_payload(payload) != payload_fingerprint_for_payload(changed)
+
+
+def test_resume_requires_a_paused_task_and_a_redacted_note():
+    task = TaskRecord()
+    with pytest.raises(ValueError, match="Only paused tasks"):
+        task.resume("note")
+
+    task.transition(TaskStatus.AWAITING_USER, "paused for human verification")
+    with pytest.raises(ValueError, match="redacted human-resolution note"):
+        task.resume("   ")
+
+    task.resume("Operator completed the simulated verification step")
+    assert task.status is TaskStatus.DISCOVERED
+    assert any("Resumed after human resolution" in event.detail for event in task.events)
+    # A resumed task must be re-inspected and freshly reviewed; it cannot submit.
+    with pytest.raises(ValueError, match="not ready for approved submission"):
+        task.begin_submission()
