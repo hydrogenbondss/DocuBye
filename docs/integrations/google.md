@@ -55,6 +55,15 @@ No browser automation is involved. You do everything in your own everyday browse
 
 The tool never touches the network: all page requests are blocked, and the offline browser only ever loads the sanitized copy of each file.
 
+## The real wizard structure (validated 15 November 2026)
+
+Validated from an owner-saved manual capture of the live form (`captures/manual/01-start.html`, processed offline by `docubye-google-report`; only the JSON report was used — never raw HTML):
+
+- The wizard is a **single dynamic page (SPA)**. There are no per-step URLs; sections expand in place as radio options are selected. Saving the page twice yields identical files unless sections were expanded first.
+- Structure: (a) reason radio list including "Content contains your personal information", plus country-of-residence dropdown; (b) info-type radio list (address/phone/email, bank account, credit card, government-ID document images, official records, login credentials, "Other personal information"); (c) a **conditional government-ID sub-section** (ID type radio, "Last four characters" field, issuing-country dropdown) that appears only for the ID option; (d) doxxing yes/no question; (e) contact email; (f) "Specific content URLs" textarea; (g) screenshots upload; (h) "Google Search results page URLs" textarea; (i) "Search terms" textarea.
+- Validation result on the unexpanded start page: **6 selectors found** (the remodeled single-page-aware checks; the older two-step model found 4), the deeper conditional sections correctly absent until expanded, **CAPTCHA and login-wall correctly absent**, **26 asset requests blocked** by the offline guard.
+- Selector validation is now single-page aware: a control present in the DOM but hidden counts as found, with visibility recorded (`found/hidden` vs `found/visible`). Fixtures under `tests/fixtures/google/` model this structure but remain hand-written synthetic content — no captured markup or values were copied.
+
 ## What this integration does
 
 `docubye-google-dry-run` (module `src/docubye/sources/google.py`) navigates the documented Google personal-contact-information removal wizard in a real browser, collects visible field metadata (never input values), and produces a **dry-run plan** for human review. It then stops. Task state, history, and the plan are recorded in the local SQLite store.

@@ -190,28 +190,62 @@ class SelectorCheck:
     step: str
     description: str
     status: str  # "found" | "missing" | "ambiguous"
+    visibility: str = "unknown"  # "visible" | "hidden" | "absent"
 
 
-def _label_status(page, label: str) -> str:
-    matches = page.get_by_text(label, exact=True)
-    visible = [matches.nth(i) for i in range(matches.count()) if matches.nth(i).is_visible()]
-    if len(visible) == 1:
-        return "found"
-    return "ambiguous" if len(visible) > 1 else "missing"
+# The real wizard is a single dynamic page: conditional sections exist in the
+# DOM before they are revealed. A present-but-hidden control therefore counts
+# as found, with its visibility recorded.
+EXPECTED_SINGLE_PAGE_LABELS = (
+    EXPECTED_CONTACT_STEPS[0],
+    EXPECTED_CONTACT_STEPS[1],
+    "Other personal information",
+    "Government-issued ID document images",
+    "Last four characters of the ID",
+    "Is the content being shared with malicious, threatening, or harassing intent?",
+)
+EXPECTED_SINGLE_PAGE_FIELDS = (
+    "country", "contact_email", "content_urls", "screenshots",
+    "search_results_urls", "search_terms",
+)
+EXPECTED_SINGLE_PAGE_BUTTONS = ("Next", "Submit")
+
+
+def _presence(page, locator) -> tuple[str, str]:
+    """(status, visibility) for a locator: hidden-but-present counts as found."""
+    count = locator.count()
+    if count == 0:
+        return "missing", "absent"
+    visible = sum(1 for i in range(count) if locator.nth(i).is_visible())
+    if visible > 1:
+        return "ambiguous", "visible"
+    if visible == 1:
+        return "found", "visible"
+    return "found", "hidden"
 
 
 def validate_selectors(page, step: str) -> list[SelectorCheck]:
     """Machine-readable adapter-vs-DOM comparison. Contains no page content."""
     checks: list[SelectorCheck] = []
-    for label in EXPECTED_CONTACT_STEPS:
-        checks.append(SelectorCheck(step, f"text:{label}", _label_status(page, label)))
-    for button in ("Next", "Submit"):
-        checks.append(SelectorCheck(step, f"button:{button}", _label_status(page, button)))
+    for label in EXPECTED_SINGLE_PAGE_LABELS:
+        status, visibility = _presence(page, page.get_by_text(label, exact=True))
+        checks.append(SelectorCheck(step, f"text:{label}", status, visibility))
+    for name in EXPECTED_SINGLE_PAGE_FIELDS:
+        status, visibility = _presence(page, page.locator(f'[name="{name}"]'))
+        checks.append(SelectorCheck(step, f"field:{name}", status, visibility))
+    for button in EXPECTED_SINGLE_PAGE_BUTTONS:
+        status, visibility = _presence(page, page.get_by_role("button", name=button, exact=True))
+        checks.append(SelectorCheck(step, f"button:{button}", status, visibility))
     checks.append(SelectorCheck(
         step, "captcha-or-challenge",
         "found" if _verification_challenge_visible(page) else "missing",
+        "visible" if _verification_challenge_visible(page) else "absent",
     ))
-    checks.append(SelectorCheck(step, "login-wall", "found" if _login_wall_visible(page) else "missing"))
+    checks.append(SelectorCheck(
+        step, "login-wall",
+        "found" if _login_wall_visible(page) else "missing",
+        "visible" if _login_wall_visible(page) else "absent",
+    ))
     return checks
 
 
@@ -264,7 +298,8 @@ class CaptureResult:
         return {
             "saved_files": self.saved_files,
             "selector_checks": [
-                {"step": c.step, "selector": c.description, "status": c.status} for c in self.checks
+                {"step": c.step, "selector": c.description, "status": c.status, "visibility": c.visibility}
+                for c in self.checks
             ],
             "notes": self.notes,
         }
