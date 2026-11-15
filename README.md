@@ -92,11 +92,7 @@ A manual inspection in the user's regular browser on 31 October 2026 confirmed t
 
 Details, failure states, and boundaries: docs/integrations/google.md.
 
-The headed handoff lifecycle bug (`TargetClosedError`) is fixed: the popup guard no longer closes the page carrying the wizard, and a surviving guarded tab is adopted when the wizard moves. For owner-run live validation of the read path (headed, real installed Chrome, you sign in yourself, sanitized captures, selector report):
-
-    DOCUBYE_REAL_SOURCE=1 docubye-capture-google-fixtures
-
-Captures are sanitized with the redaction diff shown before saving, land in the gitignored `captures/` directory, and the run prints a machine-readable selector validation report containing no page content.
+Live validation of the read path is **manual**: you walk the wizard in your own browser, save each step as HTML, and `docubye-google-report --html-dir <folder>` validates selectors offline (sanitized, opt-in copies, JSON report with no page content). See docs/integrations/google.md.
 
 ## Principles
 
