@@ -62,6 +62,25 @@ When the workflow pauses (awaiting_user), for example at a simulated verificatio
     docubye resume <task-id> --note "Operator cleared the simulated check" --confirm-human-resolution
 
 The note is redacted and recorded in the task history. The resumed task is re-inspected and freshly reviewed; it can never resume into submission, and rejection is terminal — a rejected task requires a fresh task.
+## First real-source candidate (research only)
+
+The Google Search personal contact-info workflow is being investigated, not automated. This branch adds a read-only inspector and a request contract; there is no live browser adapter and no submission path. The full findings and limitations are in docs/FIRST_SOURCE_REVIEW.md. Google Search removal does not delete the original website's content.
+
+The default command uses a fresh, unauthenticated browser context:
+
+    docubye-inspect-google-form
+
+It prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET/HEAD request, unapproved hosts, and WebSockets. If a CAPTCHA or human-verification element is visible, automatic mode stops before selecting any branch.
+
+For a person to inspect the live wizard, run the explicit headed handoff:
+
+    docubye-inspect-google-form --headed --human-handoff
+
+The browser remains visible while the terminal waits. A person may inspect the public wizard and select navigation choices, then press Enter to capture visible labels and field metadata. **The human handoff does not relax the network guard.** Only HTTPS GET/HEAD requests to the small Google-host allowlist are permitted. Every POST/PUT/PATCH/DELETE request, unapproved host, WebSocket, and known submission endpoint remains blocked. This may prevent a CAPTCHA or Next button from working. Do not sign in, enter personal information, upload files, click Submit, use an authenticated browser profile, or try to bypass a blocked request. If the branch cannot be reached under these restrictions, stop and record that it remains unverified.
+
+The inspector never reads input values, cookies, request bodies, or screenshots. Its report sets submission and field-filling flags to false. It is a diagnostic for human observation, not a live removal adapter.
+
+A manual inspection in the user's regular browser on 31 October 2026 confirmed that selecting “Content contains your personal information” reaches the live contact-info form state. The visible prompts include the address/phone/email value as it appears on the page, a separate email field as it appears on the page, and a required question about malicious or threatening intent. No values were entered and nothing was submitted. The exact selector choices, doxxing answer choices, lower-page fields, stable DOM selectors, and required flags are still being recorded. The headed Playwright handoff separately failed to render a usable page (`TargetClosedError`), so this manual observation does not mean the automated inspector or a live adapter is complete. The contact-info branch has been manually confirmed at the UI-label level only; no live adapter or submission capability is enabled.
 
 ## Principles
 
