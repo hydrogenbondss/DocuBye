@@ -44,6 +44,16 @@ CREATE TABLE IF NOT EXISTS task_events (
     detail TEXT NOT NULL,
     PRIMARY KEY (task_id, seq)
 );
+CREATE TABLE IF NOT EXISTS evidence (
+    task_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    reference TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (task_id, seq)
+);
 """
 
 
@@ -189,3 +199,23 @@ class TaskStore:
                 "UPDATE tasks SET confirmation_id = ?, updated_at = ? WHERE task_id = ?",
                 (confirmation_id, _now(), task_id),
             )
+
+    def record_evidence(self, task_id: str, kind: str, reference: str, sha256: str, note: str) -> None:
+        """Record a verification artifact. reference is a file name, note is pre-redacted."""
+        with self._db:
+            row = self._db.execute(
+                "SELECT COALESCE(MAX(seq), -1) AS max_seq FROM evidence WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            self._db.execute(
+                "INSERT INTO evidence (task_id, seq, kind, reference, sha256, note, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (task_id, int(row["max_seq"]) + 1, kind, reference, sha256, note, _now()),
+            )
+
+    def evidence_for(self, task_id: str) -> list[dict[str, str]]:
+        rows = self._db.execute(
+            "SELECT kind, reference, sha256, note, created_at FROM evidence WHERE task_id = ? ORDER BY seq",
+            (task_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]

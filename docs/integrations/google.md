@@ -1,7 +1,7 @@
 # Integration: Google Search personal contact-info removal
 
-**Status:** Read-only inspection and dry-run planning implemented. **Submission is intentionally NOT implemented.**  
-**Last tested:** 15 November 2026 — offline fixtures green; automated live capture attempted (runs of 14–15 Nov) and abandoned: Google stonewalls automation-controlled browsers at sign-in, and DocuBye does not evade that. The supported validation path is manual capture (below). The live branch was manually confirmed at the UI-label level on 31 October 2026 (see [FIRST_SOURCE_REVIEW.md](../FIRST_SOURCE_REVIEW.md)).
+**Status:** Guided submission implemented (Milestone 3, session 1): **the tool prepares and tracks; the owner submits.** No agent-driven submission exists anywhere — the owner executes the real form in their own everyday browser.  
+**Last tested:** 15 November 2026 — offline fixtures and guided-flow tests green. The live wizard structure was validated against an owner-saved capture (15 November 2026; JSON report only).
 
 ## Headed handoff repair (14 November 2026)
 
@@ -81,9 +81,20 @@ Validated from an owner-saved manual capture of the live form (`captures/manual/
 
 The exposed contact value as shown on the page, content URL(s), Google Search results URL(s), search terms, country of residence, and a contact email. Three attestations — accuracy, authority, and the search-delisting scope acknowledgement — are human-only and must never be asserted by the adapter.
 
+## Guided submission (Milestone 3, session 1)
+
+The agent prepares; the owner executes; the agent tracks honestly. There is no browser automation in this flow.
+
+1. **Inspect** (`docubye-google-dry-run`, fixtures) produces a dry-run plan and a `ready_for_review` task.
+2. **Profile** — the owner writes their values into a gitignored local file (e.g. `captures/profile.local.json`; a synthetic example lives at `tests/fixtures/google/owner_profile.example.json`). Never commit a real profile.
+3. **Submit** — `docubye submit-google <task-id> --profile <path>` builds the submission packet (ordered, section-grouped field→value checklist; conditional government-ID section only when that info type is selected), displays it in the terminal only — never written to disk, never logged — and walks the owner section by section. The owner executes the real wizard in their own browser. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once, consistent with Milestone 1 semantics. Killing the walkthrough mid-flow leaves the task resumable with the same approval; a changed profile requires a fresh review.
+4. **Verify** — `docubye verify <task-id> --evidence <path> --confirm` records a verification artifact (the file must live under gitignored `captures/evidence/`; only its name and SHA-256 are stored, plus any Google-side confirmation text redacted) and only then marks the task `removed`.
+
+Required data for a request: the exposed contact value, content URL(s), Google Search results URL(s), search terms, country of residence, contact email — plus the government-ID fields only for that branch. The three attestations (accuracy, authority, scope) remain human-only.
+
 ## Verification method
 
-Not applicable yet. A submitted request is not proof of removal; Google's decision and observed Search-result changes must be recorded as separate states when submission is eventually implemented.
+Evidence over promises: a task is never labelled removed from submission alone. `submitted_by_owner` records that the owner clicked the button (distinct from any agent-submitted state); `removed` is reachable only via the verify command with a recorded evidence artifact under `captures/evidence/`.
 
 ## Failure states
 
@@ -95,6 +106,10 @@ Not applicable yet. A submitted request is not proof of removal; Google's decisi
 | Mutated form destination | `awaiting_user` | Pause; no plan produced |
 | Page-initiated POST or external request | `awaiting_user` | Blocked by the route guard; recorded redacted (method/host/path only) |
 | Browser failure | `failed` | Safe stop; inspect before retrying |
+| Walkthrough interrupted | `ready_for_review` | Approval recorded but unconsumed; resume continues the same task |
+| Wrong typed-gate input | `ready_for_review` | Re-prompt; nothing is recorded until exact confirmation |
+| Second submission attempt | (refused) | Approval already consumed; needs fresh task/review |
+| Verify without evidence | (refused) | `removed` is never recorded from submission alone |
 
 ## Hard boundaries
 
