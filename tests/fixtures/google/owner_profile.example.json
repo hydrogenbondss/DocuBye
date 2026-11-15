@@ -1,0 +1,11 @@
+{
+  "_comment": "Synthetic example for tests and docs. Real profiles live in gitignored captures/profile.local.json — never commit real values.",
+  "reason": "personal",
+  "info_type": "contact",
+  "country": "United States",
+  "doxxing_intent": "no",
+  "contact_email": "alex.example@example.test",
+  "content_urls": ["https://example.test/listing/alex-example"],
+  "search_results_urls": ["https://www.google.com/search?q=alex+example+synthetic"],
+  "search_terms": ["Alex Example", "Alex Example phone"]
+}

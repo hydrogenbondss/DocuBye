@@ -67,6 +67,13 @@ _Amendment (first-source research branch): candidate selected — Google's offic
 
 ## Milestone 3 — Small reliable queue
 
+_Amendment (Milestone 3 session 1): guided submission for the Google source — the agent prepares and tracks; the owner executes. Implemented as an explicit addition; the queue items below remain as scoped._
+
+- [x] Submission packet builder: ordered, section-grouped field→value checklist from an owner-approved gitignored profile; conditional sections only when selected.
+- [x] Guided walkthrough CLI (`docubye submit-google`): section-by-section prompts, typed confirmation gate, single-use approval consistent with Milestone 1.
+- [x] `submitted_by_owner` state, distinct from any agent-submitted state; reachable only via the guided gate.
+- [x] Outcome verification (`docubye verify`): evidence artifact required (gitignored captures/evidence/ only) before a task can be labelled removed.
+- [x] Resume-safe mid-walkthrough; redaction tests for events/store output.
 - [ ] Queue multiple supported tasks and preserve progress between sessions.
 - [ ] Resume paused tasks without resubmitting.
 - [ ] Add retry budgets, timeouts, and clear error explanations.

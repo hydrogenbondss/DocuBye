@@ -18,8 +18,10 @@ class TaskStatus(StrEnum):
     AWAITING_USER = "awaiting_user"
     SUBMITTING = "submitting"
     SUBMITTED = "submitted"
+    SUBMITTED_BY_OWNER = "submitted_by_owner"
     AWAITING_CONFIRMATION = "awaiting_confirmation"
     VERIFIED_REMOVED = "verified_removed"
+    REMOVED = "removed"
     REJECTED = "rejected"
     FAILED = "failed"
     UNKNOWN = "unknown"
@@ -27,15 +29,25 @@ class TaskStatus(StrEnum):
 
 _ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.DISCOVERED: {TaskStatus.READY_FOR_REVIEW, TaskStatus.AWAITING_USER, TaskStatus.FAILED},
-    TaskStatus.READY_FOR_REVIEW: {TaskStatus.AWAITING_USER, TaskStatus.SUBMITTING, TaskStatus.REJECTED, TaskStatus.FAILED},
+    # SUBMITTING is the agent-driven path; SUBMITTED_BY_OWNER is reachable only
+    # through the guided gate (typed owner confirmation + consumed approval).
+    TaskStatus.READY_FOR_REVIEW: {
+        TaskStatus.AWAITING_USER, TaskStatus.SUBMITTING, TaskStatus.SUBMITTED_BY_OWNER,
+        TaskStatus.REJECTED, TaskStatus.FAILED,
+    },
     # AWAITING_USER may leave only through resume() (to DISCOVERED, forcing fresh
     # inspection and review), REJECTED, or FAILED. There is no direct path back
     # to READY_FOR_REVIEW: caller code cannot bypass the human-resolution gate.
     TaskStatus.AWAITING_USER: {TaskStatus.DISCOVERED, TaskStatus.REJECTED, TaskStatus.FAILED},
     TaskStatus.SUBMITTING: {TaskStatus.SUBMITTED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.SUBMITTED: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.UNKNOWN, TaskStatus.FAILED},
-    TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
+    # The owner clicked the button in their own browser; the agent only recorded it.
+    TaskStatus.SUBMITTED_BY_OWNER: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.FAILED},
+    # REMOVED is reachable only via the verify command with a recorded evidence
+    # artifact; never from submission alone.
+    TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.VERIFIED_REMOVED: set(),
+    TaskStatus.REMOVED: set(),
     TaskStatus.REJECTED: set(),
     TaskStatus.FAILED: set(),
     # UNKNOWN may only return to AWAITING_CONFIRMATION, and only through the

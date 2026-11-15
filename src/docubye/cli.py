@@ -10,6 +10,7 @@ from .agent import MockRemovalAgent, ReviewSummary, recover_submission, resume_p
 from .mock_site import running_mock_site
 from .models import SyntheticProfile
 from .planner import RuleBasedPlanner
+from .sources.google_guided import run_guided_submission, verify_removal
 from .store import TaskStore
 
 SCENARIOS = ["normal", "challenge", "unexpected", "verified", "early-submit", "timeout-after-submit"]
@@ -84,6 +85,27 @@ def _resume(args: argparse.Namespace) -> None:
         store.close()
 
 
+def _submit_google(args: argparse.Namespace) -> None:
+    store = TaskStore(args.store)
+    try:
+        task = run_guided_submission(store, args.task_id, args.profile)
+        print(json.dumps(task.to_public_dict(), indent=2))
+    finally:
+        store.close()
+
+
+def _verify(args: argparse.Namespace) -> None:
+    store = TaskStore(args.store)
+    try:
+        task = verify_removal(
+            store, args.task_id, args.evidence,
+            confirm=args.confirm, google_confirmation=args.google_confirmation,
+        )
+        print(json.dumps(task.to_public_dict(), indent=2))
+    finally:
+        store.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run DocuBye's local synthetic removal demo")
     subparsers = parser.add_subparsers(dest="command")
@@ -133,9 +155,38 @@ def main() -> None:
     resume_parser.add_argument("--headed", action="store_true", help="Show the local browser window")
     resume_parser.set_defaults(handler=_resume)
 
+    submit_parser = subparsers.add_parser(
+        "submit-google",
+        help="Guided submission: you walk the real form in your browser; the tool guides and records",
+    )
+    submit_parser.add_argument("task_id")
+    submit_parser.add_argument(
+        "--profile", required=True,
+        help="Owner-approved profile JSON (must live under gitignored captures/)",
+    )
+    submit_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    submit_parser.set_defaults(handler=_submit_google)
+
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help="Record a verification artifact and mark the task removed (evidence required)",
+    )
+    verify_parser.add_argument("task_id")
+    verify_parser.add_argument(
+        "--evidence", required=True,
+        help="Evidence file (must live under gitignored captures/evidence/)",
+    )
+    verify_parser.add_argument("--confirm", action="store_true", help="Required explicit confirmation")
+    verify_parser.add_argument(
+        "--google-confirmation", default="",
+        help="Optional Google-side confirmation text (recorded redacted)",
+    )
+    verify_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    verify_parser.set_defaults(handler=_verify)
+
     # Backwards-compatible default: `docubye --scenario normal` still runs the demo.
     argv = sys.argv[1:]
-    if not argv or argv[0] not in {"run", "recover", "resume", "-h", "--help"}:
+    if not argv or argv[0] not in {"run", "recover", "resume", "submit-google", "verify", "-h", "--help"}:
         argv = ["run", *argv]
     args = parser.parse_args(argv)
     if args.command == "resume" and not args.confirm_human_resolution:
