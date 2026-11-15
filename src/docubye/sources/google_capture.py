@@ -215,6 +215,43 @@ def validate_selectors(page, step: str) -> list[SelectorCheck]:
     return checks
 
 
+# --- Browser session ---------------------------------------------------------
+
+# Live runs use the owner's real Google Chrome (channel="chrome") through a
+# persistent profile under the gitignored captures/ directory. Chrome for
+# Testing is stonewalled by Google's sign-in flow (automation-flagged binary,
+# observed 15 November 2026: sign-in hung after email entry with only
+# telemetry blocked). We deliberately apply NO anti-detection measures — no
+# navigator.webdriver tampering, no user-agent spoofing, no fingerprint
+# tricks. The human performs all authentication in a normal browser binary;
+# we do not disguise automation from Google. Tests and fixtures keep the
+# Playwright-managed Chromium.
+
+
+def _launch_session(playwright, *, live: bool, headless: bool, profile_dir: Path):
+    """Return (context, browser). browser is None for a persistent context."""
+    if live:
+        if headless:
+            raise ValueError("Live capture requires a headed browser so the owner can sign in")
+        try:
+            context = playwright.chromium.launch_persistent_context(
+                str(profile_dir),
+                channel="chrome",
+                headless=False,
+                service_workers="block",
+                accept_downloads=False,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "Google Chrome is not installed or could not be launched. Live capture needs "
+                "the owner's real Chrome browser; install Chrome and retry. The offline fixture "
+                "path does not require Chrome."
+            ) from exc
+        return context, None
+    browser = playwright.chromium.launch(headless=headless)
+    return browser.new_context(service_workers="block", accept_downloads=False), browser
+
+
 # --- Capture flow ------------------------------------------------------------
 
 @dataclass(slots=True)
@@ -270,11 +307,15 @@ def run_capture(
 
     result = CaptureResult()
     output = Path(output_dir)
+    live = start_url == LIVE_FORM_URL
+    profile_dir = output.parent / "chrome-profile"
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=headless)
-        context = browser.new_context(service_workers="block", accept_downloads=False)
-        main_page_holder: dict = {}
+        context, browser = _launch_session(
+            playwright, live=live, headless=headless, profile_dir=profile_dir
+        )
+        page = context.pages[0] if context.pages else context.new_page()
+        main_page_holder: dict = {"page": page}
         _install_popup_guard(context, main_page_holder)
 
         guard = _TwoPhaseGuard(
@@ -287,8 +328,6 @@ def run_capture(
 
         context.route("**/*", guard)
         context.route_web_socket(lambda _url: True, block_websocket)
-        page = context.new_page()
-        main_page_holder["page"] = page
         try:
             page.goto(start_url, wait_until="domcontentloaded", timeout=30_000)
             _prompt_until_empty(
@@ -371,7 +410,8 @@ def run_capture(
             return result
         finally:
             context.close()
-            browser.close()
+            if browser is not None:
+                browser.close()
 
 
 def main() -> None:
