@@ -10,7 +10,9 @@ from docubye.sources.google_capture import (
     redaction_diff,
     run_capture,
     sanitize_html,
+    signin_phase_allowed,
     validate_selectors,
+    wizard_phase_allowed,
 )
 
 pytest.importorskip("playwright")
@@ -71,6 +73,31 @@ def test_validate_selectors_reports_found_missing_ambiguous(chromium):
         browser.close()
 
 
+def test_signin_phase_policy_allows_human_auth_posts_and_blocks_telemetry():
+    # The human's own sign-in form submission passes during the sign-in phase.
+    assert signin_phase_allowed("https://accounts.google.com/signin/v2/challenge", "POST")
+    assert signin_phase_allowed("https://accounts.google.com/ServiceLogin", "GET")
+    # Wizard and static hosts stay read-only even in the sign-in phase.
+    assert not signin_phase_allowed("https://support.google.com/websearch/contact/x", "POST")
+    assert signin_phase_allowed("https://support.google.com/websearch/contact/x", "GET")
+    assert signin_phase_allowed("https://www.gstatic.com/script.js", "GET")
+    # Telemetry and look-alike or plaintext auth hosts stay blocked.
+    assert not signin_phase_allowed("https://play.google.com/log", "POST")
+    assert not signin_phase_allowed("https://www.google-analytics.com/collect", "POST")
+    assert not signin_phase_allowed("https://accounts.google.com.evil.test/", "POST")
+    assert not signin_phase_allowed("http://accounts.google.com/signin", "POST")
+
+
+def test_wizard_phase_policy_relocks_to_read_only():
+    assert wizard_phase_allowed("https://support.google.com/websearch/contact/x", "GET")
+    assert wizard_phase_allowed("https://www.gstatic.com/script.js", "HEAD")
+    assert not wizard_phase_allowed("https://support.google.com/websearch/contact/x", "POST")
+    # The auth host itself is no longer reachable once the wizard phase begins.
+    assert not wizard_phase_allowed("https://accounts.google.com/signin", "POST")
+    assert not wizard_phase_allowed("https://accounts.google.com/signin", "GET")
+    assert not wizard_phase_allowed("https://play.google.com/log", "GET")
+
+
 def test_capture_refuses_without_env_opt_in():
     with pytest.raises(RuntimeError, match="DOCUBYE_REAL_SOURCE"):
         run_capture(env={}, prompt_fn=lambda _message: "")
@@ -81,9 +108,28 @@ def test_capture_refuses_without_typed_account_confirmation():
         run_capture(env={"DOCUBYE_REAL_SOURCE": "1"}, prompt_fn=lambda _message: "yes sure")
 
 
-def _scripted_prompts(answers):
+def _scripted_prompts(answers, calls):
     iterator = iter(answers)
-    return lambda _message: next(iterator, "")
+
+    def prompt(message):
+        calls.append(message)
+        return next(iterator, "")
+
+    return prompt
+
+
+def _offline_capture(base, tmp_path, answers, calls, **overrides):
+    params = {
+        "output_dir": tmp_path / "captures",
+        "start_url": f"{base}{FORM_PATH}?hl=en",
+        "prompt_fn": _scripted_prompts(answers, calls),
+        "env": {"DOCUBYE_REAL_SOURCE": "1"},
+        "headless": True,
+        "auth_host": "127.0.0.1",
+        "wizard_host": "127.0.0.1",
+    }
+    params.update(overrides)
+    return run_capture(**params)
 
 
 def test_offline_capture_flow_sanitizes_and_reports(chromium, tmp_path):
@@ -92,24 +138,17 @@ def test_offline_capture_flow_sanitizes_and_reports(chromium, tmp_path):
     fixture_dir.mkdir()
     html = Path("tests/fixtures/google/happy.html").read_text(encoding="utf-8").replace(
         "</main>",
-        f'<div aria-label="Google Account: Jane Doe (jane.doe@example.com)" data-ogpc>Jane Doe</div>'
-        f'<p>Contact jane.doe@example.com or +1 415 555 0132</p></main>',
+        '<div aria-label="Google Account: Jane Doe (jane.doe@example.com)" data-ogpc>Jane Doe</div>'
+        '<p>Contact jane.doe@example.com or +1 415 555 0132</p></main>',
     )
     (fixture_dir / "happy.html").write_text(html, encoding="utf-8")
 
+    calls: list[str] = []
     with serve_google_fixtures(fixture_dir, "happy") as (base, counts):
-        prompts = _scripted_prompts([
-            ACCOUNT_CONFIRMATION,  # account confirmation
-            "",                    # sign-in pause (fixture needs none)
-            "save", "save", "save",
-        ])
-        result = run_capture(
-            output_dir=tmp_path / "captures",
-            start_url=f"{base}{FORM_PATH}?hl=en",
-            allow_request=lambda url, method: url.startswith(base) and method.upper() == "GET",
-            prompt_fn=prompts,
-            env={"DOCUBYE_REAL_SOURCE": "1"},
-            headless=True,
+        result = _offline_capture(
+            base, tmp_path,
+            [ACCOUNT_CONFIRMATION, "", "save", "save", "save"],
+            calls,
         )
         assert counts["posts"] == 0
 
@@ -130,16 +169,96 @@ def test_offline_capture_flow_sanitizes_and_reports(chromium, tmp_path):
 
 
 def test_capture_declined_save_writes_nothing(chromium, tmp_path):
+    calls: list[str] = []
     with serve_google_fixtures("tests/fixtures/google", "happy") as (base, _counts):
-        prompts = _scripted_prompts([ACCOUNT_CONFIRMATION, "", "no", "no", "no"])
-        result = run_capture(
-            output_dir=tmp_path / "captures",
-            start_url=f"{base}{FORM_PATH}?hl=en",
-            allow_request=lambda url, method: url.startswith(base) and method.upper() == "GET",
-            prompt_fn=prompts,
-            env={"DOCUBYE_REAL_SOURCE": "1"},
-            headless=True,
+        result = _offline_capture(
+            base, tmp_path, [ACCOUNT_CONFIRMATION, "", "no", "no", "no"], calls
         )
     assert result.saved_files == []
     assert not (tmp_path / "captures").exists()
     assert any("declined" in note for note in result.notes)
+
+
+def test_signin_phase_allows_auth_post_but_blocks_telemetry(chromium, tmp_path):
+    fixture_dir = tmp_path / "fixtures"
+    fixture_dir.mkdir()
+    html = Path("tests/fixtures/google/happy.html").read_text(encoding="utf-8").replace(
+        "</body>",
+        '<script>'
+        'fetch("/auth-endpoint", {method:"POST", body:"human-signin=1"}).catch(() => {});'
+        'fetch("https://play.google.com/log", {method:"POST", body:"t=1"}).catch(() => {});'
+        "</script></body>",
+    )
+    (fixture_dir / "happy.html").write_text(html, encoding="utf-8")
+
+    calls: list[str] = []
+    with serve_google_fixtures(fixture_dir, "happy") as (base, counts):
+        result = _offline_capture(
+            base, tmp_path, [ACCOUNT_CONFIRMATION, "", "no", "no", "no"], calls
+        )
+        # The human's sign-in POST passed in the sign-in phase...
+        assert counts["posts"] == 1
+
+    # ...and the telemetry POST was blocked, logged redacted (method/host/path only).
+    assert any("Blocked POST play.google.com" in note for note in result.notes)
+    assert "t=1" not in json.dumps(result.notes)
+
+
+def test_wizard_phase_relocks_and_blocks_posts(chromium, tmp_path):
+    fixture_dir = tmp_path / "fixtures"
+    fixture_dir.mkdir()
+    html = Path("tests/fixtures/google/happy.html").read_text(encoding="utf-8").replace(
+        "</body>",
+        '<script>'
+        'fetch("/auth-endpoint", {method:"POST", body:"human-signin=1"}).catch(() => {});'
+        'document.querySelectorAll(\'input[name="kind"]\').forEach(function (r) {'
+        '  r.addEventListener("change", function () {'
+        '    fetch("/submit-attempt", {method:"POST", body:"x=1"}).catch(() => {});'
+        "  });"
+        "});"
+        "</script></body>",
+    )
+    (fixture_dir / "happy.html").write_text(html, encoding="utf-8")
+
+    calls: list[str] = []
+    with serve_google_fixtures(fixture_dir, "happy") as (base, counts):
+        result = _offline_capture(
+            base, tmp_path, [ACCOUNT_CONFIRMATION, "", "no", "no", "no"], calls
+        )
+        # Only the sign-in-phase POST reached the server; the wizard-phase POST
+        # fired by the branch click was blocked after the guard re-locked.
+        assert counts["posts"] == 1
+
+    assert any("Blocked POST 127.0.0.1/submit-attempt (wizard phase)" in note for note in result.notes)
+    assert any("No fields were filled" in note for note in result.notes)
+
+
+def test_non_empty_handoff_input_reprompts(chromium, tmp_path):
+    calls: list[str] = []
+    with serve_google_fixtures("tests/fixtures/google", "happy") as (base, _counts):
+        result = _offline_capture(
+            base, tmp_path,
+            [ACCOUNT_CONFIRMATION, "rm -rf ~", "", "no", "no", "no"],
+            calls,
+        )
+    assert any("press Enter alone" in message for message in calls)
+    assert len(result.checks) > 0  # the run proceeded only after an empty Enter
+
+
+def test_wizard_not_loaded_pauses_with_redacted_note(chromium, tmp_path):
+    # The page loads (auth host), but it is not the wizard domain: the run must
+    # pause with a note instead of producing an empty report.
+    calls: list[str] = []
+    with serve_google_fixtures("tests/fixtures/google", "happy") as (base, _counts):
+        result = run_capture(
+            output_dir=tmp_path / "captures",
+            start_url=f"{base}{FORM_PATH}?hl=en",
+            prompt_fn=_scripted_prompts([ACCOUNT_CONFIRMATION, ""], calls),
+            env={"DOCUBYE_REAL_SOURCE": "1"},
+            headless=True,
+            auth_host="127.0.0.1",
+            wizard_host="support.google.com",  # not what the fixture serves
+        )
+    assert result.saved_files == []
+    assert result.checks == []
+    assert any("Wizard domain not loaded" in note for note in result.notes)

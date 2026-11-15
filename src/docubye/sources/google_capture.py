@@ -28,12 +28,109 @@ from ..google_inspect import (
     _install_popup_guard,
     _resolve_working_page,
     _verification_challenge_visible,
-    inspection_request_allowed,
 )
 from .google import LIVE_FORM_URL, REAL_SOURCE_ENV, _login_wall_visible
 
 ACCOUNT_CONFIRMATION = "I will sign in myself"
 DEFAULT_OUTPUT_DIR = "captures/google"
+
+# Two-phase network policy. Documented in docs/integrations/google.md.
+#
+# AUTH_HOST: accounts.google.com — the human's own sign-in form lives here and
+#   its submission is a POST. During the sign-in phase the guard allows
+#   GET/POST/HEAD to this host only so the PERSON can authenticate; the agent
+#   remains read-only and never sends anything itself. No other auth-domain
+#   host is allowed: if Google's redirect chain involves any other host, the
+#   run stops with a redacted note instead of widening this list implicitly.
+# WIZARD_HOST: support.google.com — the removal wizard. GET/HEAD only, always.
+# STATIC_HOSTS: static asset hosts needed to render Google's pages
+#   (gstatic = scripts/styles/fonts, fonts.googleapis.com = CSS,
+#   google.com/www.google.com = wizard-referenced assets). GET/HEAD only.
+# Telemetry endpoints (play.google.com, google-analytics.com,
+# googletagmanager.com, ogs.google.com, ...) are NOT in any allowlist and stay
+# blocked in both phases.
+AUTH_HOST = "accounts.google.com"
+WIZARD_HOST = "support.google.com"
+STATIC_HOSTS = frozenset({
+    "www.gstatic.com", "ssl.gstatic.com", "fonts.gstatic.com", "fonts.googleapis.com",
+    "google.com", "www.google.com",
+})
+
+
+def _host_of(url: str) -> str:
+    return (urlsplit(url).hostname or "").casefold().rstrip(".")
+
+
+def _scheme_ok(url: str, host: str) -> bool:
+    scheme = urlsplit(url).scheme
+    if scheme == "https":
+        return True
+    # Plain HTTP is accepted only for loopback fixture servers used by tests.
+    return scheme == "http" and host == "127.0.0.1"
+
+
+def signin_phase_allowed(url: str, method: str, *, auth_host: str = AUTH_HOST,
+                         wizard_host: str = WIZARD_HOST, static_hosts=frozenset(STATIC_HOSTS)) -> bool:
+    """Sign-in phase: the human's auth POSTs to the auth host pass; read-only elsewhere."""
+    host = _host_of(url)
+    if not host or not _scheme_ok(url, host):
+        return False
+    verb = method.upper()
+    if host == auth_host:
+        return verb in {"GET", "POST", "HEAD"}
+    if host == wizard_host or host in static_hosts:
+        return verb in {"GET", "HEAD"}
+    return False
+
+
+def wizard_phase_allowed(url: str, method: str, *, wizard_host: str = WIZARD_HOST,
+                         static_hosts=frozenset(STATIC_HOSTS)) -> bool:
+    """Wizard phase: re-locked to GET/HEAD on the wizard and static hosts only."""
+    host = _host_of(url)
+    if not host or not _scheme_ok(url, host):
+        return False
+    return method.upper() in {"GET", "HEAD"} and (host == wizard_host or host in static_hosts)
+
+
+class _TwoPhaseGuard:
+    """Sign-in phase permits human auth POSTs; wizard phase is GET/HEAD-only."""
+
+    def __init__(self, notes: list[str], *, auth_host: str, wizard_host: str,
+                 static_hosts: frozenset) -> None:
+        self.phase = "sign-in"
+        self.notes = notes
+        self.auth_host = auth_host
+        self.wizard_host = wizard_host
+        self.static_hosts = static_hosts
+
+    def __call__(self, route) -> None:
+        request = route.request
+        if self.phase == "sign-in":
+            allowed = signin_phase_allowed(
+                request.url, request.method,
+                auth_host=self.auth_host, wizard_host=self.wizard_host, static_hosts=self.static_hosts,
+            )
+        else:
+            allowed = wizard_phase_allowed(
+                request.url, request.method,
+                wizard_host=self.wizard_host, static_hosts=self.static_hosts,
+            )
+        if not allowed:
+            parsed = urlsplit(request.url)
+            self.notes.append(
+                f"Blocked {request.method.upper()} {parsed.hostname or '<invalid>'}{parsed.path[:80]} "
+                f"({self.phase} phase)"
+            )
+            route.abort("blockedbyclient")
+            return
+        route.continue_()
+
+
+def _prompt_until_empty(prompt_fn: Callable[[str], str], message: str) -> None:
+    """Require an empty Enter; non-empty input (e.g. a pasted command) re-prompts."""
+    answer = prompt_fn(message)
+    while answer.strip():
+        answer = prompt_fn("No input expected here — press Enter alone when ready: ")
 
 # --- Sanitization ------------------------------------------------------------
 
@@ -140,16 +237,18 @@ def run_capture(
     *,
     output_dir: str | Path = DEFAULT_OUTPUT_DIR,
     start_url: str = LIVE_FORM_URL,
-    allow_request: Callable[[str, str], bool] = inspection_request_allowed,
     prompt_fn: Callable[[str], str] = input,
     env: dict[str, str] | None = None,
     headless: bool = False,
+    auth_host: str = AUTH_HOST,
+    wizard_host: str = WIZARD_HOST,
+    static_hosts: frozenset = frozenset(STATIC_HOSTS),
 ) -> CaptureResult:
     """Headed, human-driven read-only capture. Never fills, never submits.
 
-    ``start_url``, ``allow_request``, and ``headless`` exist so tests can run
+    ``start_url``, the host parameters, and ``headless`` exist so tests can run
     the same flow offline against sanitized fixtures; production use keeps the
-    defaults (live URL, live guard, headed).
+    defaults (live URL, live two-phase guard, headed).
     """
     env = os.environ if env is None else env
     if env.get(REAL_SOURCE_ENV) != "1":
@@ -178,15 +277,9 @@ def run_capture(
         main_page_holder: dict = {}
         _install_popup_guard(context, main_page_holder)
 
-        def guard(route) -> None:
-            request = route.request
-            if not allow_request(request.url, request.method):
-                result.notes.append(
-                    f"Blocked {request.method.upper()} {urlsplit(request.url).hostname}"
-                )
-                route.abort("blockedbyclient")
-                return
-            route.continue_()
+        guard = _TwoPhaseGuard(
+            result.notes, auth_host=auth_host, wizard_host=wizard_host, static_hosts=static_hosts
+        )
 
         def block_websocket(socket_route) -> None:
             result.notes.append(f"Blocked WEBSOCKET {urlsplit(socket_route.url).hostname}")
@@ -198,24 +291,45 @@ def run_capture(
         main_page_holder["page"] = page
         try:
             page.goto(start_url, wait_until="domcontentloaded", timeout=30_000)
-            prompt_fn(
+            _prompt_until_empty(
+                prompt_fn,
                 "Sign in yourself in the browser window if the form requires it. "
-                "The agent does not see credentials. Press Enter here when the form is visible: "
+                "The agent does not see credentials. Press Enter alone when the wizard is visible: ",
             )
-            resolved = _resolve_working_page(context, page, allow_request)
+            resolved = _resolve_working_page(
+                context, page,
+                lambda url, method: signin_phase_allowed(
+                    url, method, auth_host=auth_host, wizard_host=wizard_host, static_hosts=static_hosts
+                ),
+            )
             if resolved is None:
                 result.notes.append("Browser window closed before capture; nothing was saved.")
                 return result
             page = resolved
             main_page_holder["page"] = page
 
+            # Verify the wizard actually loaded before proceeding; never produce
+            # an empty report from a page that is not the wizard.
+            current_host = _host_of(page.url)
+            if current_host != wizard_host:
+                result.notes.append(
+                    f"Wizard domain not loaded after sign-in (host: {current_host or 'none'}); "
+                    "paused without capturing. If the redirect chain involved another host, "
+                    "it was deliberately not allowlisted."
+                )
+                return result
             if _login_wall_visible(page):
                 result.notes.append("Sign-in wall still visible after human sign-in pause; stopping here.")
                 return result
+
+            # Auth is complete: re-lock to GET/HEAD on the wizard domain only.
+            guard.phase = "wizard"
+
             if _verification_challenge_visible(page):
-                prompt_fn(
+                _prompt_until_empty(
+                    prompt_fn,
                     "A CAPTCHA/verification is visible. Solve it yourself in the browser "
-                    "(the agent never bypasses it), then press Enter; or press Enter to stop: "
+                    "(the agent never bypasses it), then press Enter alone; or press Enter to stop: ",
                 )
                 if _verification_challenge_visible(page):
                     result.notes.append("Verification challenge still visible; capture stopped before branch selection.")
