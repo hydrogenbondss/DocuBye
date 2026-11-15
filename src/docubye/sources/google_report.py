@@ -41,7 +41,8 @@ class ReportResult:
             "processed_files": self.processed_files,
             "saved_files": self.saved_files,
             "selector_checks": [
-                {"step": c.step, "selector": c.description, "status": c.status} for c in self.checks
+                {"step": c.step, "selector": c.description, "status": c.status, "visibility": c.visibility}
+                for c in self.checks
             ],
             "blocked_requests": self.blocked_requests,
             "notes": self.notes,

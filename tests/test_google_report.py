@@ -42,8 +42,8 @@ def test_report_processes_files_in_name_order(chromium, tmp_path, capsys):
     assert len(result.saved_files) == 2
     # Step labels follow file names, in order.
     steps = [c.step for c in result.checks]
-    assert steps[:6] == ["01-start"] * 6
-    assert steps[6:] == ["02-branch"] * 6
+    assert steps[:16] == ["01-start"] * 16
+    assert steps[16:] == ["02-branch"] * 16
     # Selector checks ran per step: the branch label is found in these pages.
     found = [c for c in result.checks if c.description == f"text:{EXPECTED_CONTACT_STEPS[0]}"]
     assert all(c.status == "found" for c in found)

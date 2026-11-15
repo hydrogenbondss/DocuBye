@@ -299,8 +299,8 @@ def inspect_google_dry_run(
                     plannable = [
                         FormField(name=f.name, label=f.label, input_type=f.field_type, required=f.required)
                         for f in fields
-                        if f.tag in {"input", "textarea", "select"} and f.field_type not in {"radio", "checkbox"}
-                        and f.name not in {"kind", "info", "doxxing_intent"}
+                        if f.tag in {"input", "textarea", "select"} and f.field_type not in {"radio", "checkbox", "file"}
+                        and f.name not in {"reason", "info_type", "id_type", "doxxing_intent"}
                     ]
                     mapping = RuleBasedPlanner().map_fields(plannable)
                     mapped_names = set(mapping.mapping)

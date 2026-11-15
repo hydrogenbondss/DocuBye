@@ -38,15 +38,15 @@ def test_happy_path_produces_a_dry_run_plan_and_never_submits(chromium, tmp_path
     assert "Submit" in plan.visible_buttons
     assert "Next" in plan.visible_buttons
 
-    # Field metadata was collected without values.
+    # Field metadata was collected without values, from the single-page wizard.
     names = {f.name for f in plan.visible_fields}
-    assert {"exposed_value", "content_url", "search_results_url", "contact_email"} <= names
+    assert {"contact_email", "content_urls", "search_results_urls", "search_terms"} <= names
     assert all(not hasattr(f, "value") for f in plan.visible_fields)
 
     # The planner refuses to guess: the M1 profile schema does not fit these
     # fields, so required fields stay unmapped for human review.
     assert plan.field_mapping.needs_human_help
-    assert "exposed_value" in plan.unmapped_required_fields
+    assert "content_urls" in plan.unmapped_required_fields
     assert "contact_email" in plan.unmapped_required_fields
 
     # Human-only attestations are named, never asserted by the adapter.

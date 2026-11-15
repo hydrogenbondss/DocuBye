@@ -63,13 +63,31 @@ def test_validate_selectors_reports_found_missing_ambiguous(chromium):
             f"<label><input type='radio'>{EXPECTED_CONTACT_STEPS[0]}</label>"
             "<button>Next</button><button>Next</button>"
         )
-        checks = {(c.description): c.status for c in validate_selectors(page, "test-step")}
-        assert checks[f"text:{EXPECTED_CONTACT_STEPS[0]}"] == "found"
-        assert checks[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == "missing"
-        assert checks["button:Next"] == "ambiguous"
-        assert checks["button:Submit"] == "missing"
-        assert checks["captcha-or-challenge"] == "missing"
+        checks = {c.description: (c.status, c.visibility) for c in validate_selectors(page, "test-step")}
+        assert checks[f"text:{EXPECTED_CONTACT_STEPS[0]}"] == ("found", "visible")
+        assert checks[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == ("missing", "absent")
+        assert checks["button:Next"] == ("ambiguous", "visible")
+        assert checks["button:Submit"] == ("missing", "absent")
+        assert checks["captcha-or-challenge"][0] == "missing"
         assert all(c.step == "test-step" for c in validate_selectors(page, "test-step"))
+        browser.close()
+
+
+def test_hidden_but_present_selector_counts_as_found(chromium):
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        # The real wizard keeps conditional sections in the DOM before revealing them.
+        page.set_content(
+            f'<fieldset hidden><label><input type="radio">{EXPECTED_CONTACT_STEPS[1]}</label>'
+            '<label for="id-last-four">Last four characters of the ID</label>'
+            '<input id="id-last-four" name="id_last_four" type="text"></fieldset>'
+        )
+        checks = {c.description: (c.status, c.visibility) for c in validate_selectors(page, "test-step")}
+        assert checks[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == ("found", "hidden")
+        assert checks["text:Last four characters of the ID"] == ("found", "hidden")
         browser.close()
 
 
@@ -161,10 +179,14 @@ def test_offline_capture_flow_sanitizes_and_reports(chromium, tmp_path):
         assert "+1 415 555 0132" not in content
 
     report = result.report()
-    landing = {(c["selector"]): c["status"] for c in report["selector_checks"] if c["step"] == "landing"}
-    contact = {(c["selector"]): c["status"] for c in report["selector_checks"] if c["step"] == "contact-branch"}
-    assert landing[f"text:{EXPECTED_CONTACT_STEPS[0]}"] == "found"
-    assert contact[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == "found"
+    landing = {(c["selector"]): (c["status"], c["visibility"]) for c in report["selector_checks"] if c["step"] == "landing"}
+    contact = {(c["selector"]): (c["status"], c["visibility"]) for c in report["selector_checks"] if c["step"] == "contact-branch"}
+    assert landing[f"text:{EXPECTED_CONTACT_STEPS[0]}"] == ("found", "visible")
+    # The info-type branch exists in the DOM but is hidden until the reason radio is selected.
+    assert landing[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == ("found", "hidden")
+    assert contact[f"text:{EXPECTED_CONTACT_STEPS[1]}"] == ("found", "visible")
+    # The conditional government-ID sub-section stays hidden when not selected.
+    assert contact["text:Last four characters of the ID"] == ("found", "hidden")
     assert "Submit" not in json.dumps(report["notes"])
     assert any("No fields were filled" in note for note in report["notes"])
 
@@ -212,7 +234,7 @@ def test_wizard_phase_relocks_and_blocks_posts(chromium, tmp_path):
         "</body>",
         '<script>'
         'fetch("/auth-endpoint", {method:"POST", body:"human-signin=1"}).catch(() => {});'
-        'document.querySelectorAll(\'input[name="kind"]\').forEach(function (r) {'
+        'document.querySelectorAll(\'input[name="reason"]\').forEach(function (r) {'
         '  r.addEventListener("change", function () {'
         '    fetch("/submit-attempt", {method:"POST", body:"x=1"}).catch(() => {});'
         "  });"
