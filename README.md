@@ -92,7 +92,7 @@ A manual inspection in the user's regular browser on 31 October 2026 confirmed t
 
 Details, failure states, and boundaries: docs/integrations/google.md.
 
-The headed handoff lifecycle bug (`TargetClosedError`) is fixed: the popup guard no longer closes the page carrying the wizard, and a surviving guarded tab is adopted when the wizard moves. For owner-run live validation of the read path (headed, you sign in yourself, sanitized captures, selector report):
+The headed handoff lifecycle bug (`TargetClosedError`) is fixed: the popup guard no longer closes the page carrying the wizard, and a surviving guarded tab is adopted when the wizard moves. For owner-run live validation of the read path (headed, real installed Chrome, you sign in yourself, sanitized captures, selector report):
 
     DOCUBYE_REAL_SOURCE=1 docubye-capture-google-fixtures
 

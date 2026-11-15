@@ -1,7 +1,7 @@
 # Integration: Google Search personal contact-info removal
 
 **Status:** Read-only inspection and dry-run planning implemented. **Submission is intentionally NOT implemented.**  
-**Last tested:** 15 November 2026, against sanitized offline fixtures (`tests/fixtures/google/`). Live capture attempted 14 November 2026 and failed closed (auth-domain block; zero data captured — see below). The live branch was manually confirmed at the UI-label level on 31 October 2026 (see [FIRST_SOURCE_REVIEW.md](../FIRST_SOURCE_REVIEW.md)); the live site has not been re-driven by this adapter.
+**Last tested:** 15 November 2026 — offline fixtures green; live run #2 attempted (guard correct; sign-in stonewalled on the automation-flagged Chrome for Testing binary; fix: owner's real Chrome via persistent context). The live branch was manually confirmed at the UI-label level on 31 October 2026 (see [FIRST_SOURCE_REVIEW.md](../FIRST_SOURCE_REVIEW.md)); the live site has not been successfully re-driven by this adapter yet.
 
 ## Headed handoff repair (14 November 2026)
 
@@ -15,7 +15,15 @@
 
 ### Live run, 14 November 2026 — failed closed, as designed
 
-The first live capture run stopped safely: the route guard's live-mode allowlist permitted only the wizard domain, so `accounts.google.com` was blocked and human sign-in was impossible. Zero files saved, zero selector checks, no submission, redacted notes only. Live selector validation is **still pending**.
+The first live capture run stopped safely: the route guard's live-mode allowlist permitted only the wizard domain, so `accounts.google.com` was blocked and human sign-in was impossible. Zero files saved, zero selector checks, no submission, redacted notes only.
+
+### Live run #2, 15 November 2026 — guard correct; sign-in stonewalled on the automation binary
+
+With the two-phase guard, **no `accounts.google.com` request was blocked** — the guard blocked only telemetry and widget endpoints (`google-analytics`, `googletagmanager`, `play.google.com/log`, `ogads`/`ogs` widgets, and `support.google.com` `/apis/cuf*` and `/s/infolog` — see the note below). Yet sign-in hung indefinitely after email entry. This is the signature of Google stonewalling automation-flagged binaries (Chrome for Testing). The guard behaved correctly; the browser binary was the problem.
+
+**Fix:** the live path now launches the owner's real installed Google Chrome (`channel="chrome"`) via a persistent profile under the gitignored `captures/` directory. There are deliberately **no anti-detection measures** — no `navigator.webdriver` tampering, no user-agent spoofing, no fingerprint tricks. The human performs all authentication in a normal browser binary; DocuBye does not disguise automation from Google. Tests and fixtures keep the Playwright-managed Chromium.
+
+**Allowlist unchanged.** Every host blocked in run #2 was telemetry or widgets. Note: `support.google.com` `/apis/cuf*` and `/s/infolog` were observed blocked while the wizard never loaded. Only if the wizard fails to render *after* a successful sign-in may these be evaluated — one by one, each with written justification — and never implicitly.
 
 ### Two-phase guard (15 November 2026)
 

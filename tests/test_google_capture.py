@@ -262,3 +262,103 @@ def test_wizard_not_loaded_pauses_with_redacted_note(chromium, tmp_path):
     assert result.saved_files == []
     assert result.checks == []
     assert any("Wizard domain not loaded" in note for note in result.notes)
+
+
+# --- Live browser-launch policy (mocked Playwright; no browser, no network) ---
+
+class _StopCapture(Exception):
+    pass
+
+
+def _fake_playwright_session(monkeypatch, **launchers):
+    import types
+
+    import playwright.sync_api as sync_api
+
+    chromium = types.SimpleNamespace(**launchers)
+
+    class FakeSession:
+        def __enter__(self):
+            return types.SimpleNamespace(chromium=chromium)
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(sync_api, "sync_playwright", lambda: FakeSession())
+
+
+def test_live_path_uses_real_chrome_persistent_context(monkeypatch, tmp_path):
+    import playwright.sync_api as sync_api
+
+    calls: dict = {}
+
+    def fake_lpc(user_data_dir, **kwargs):
+        calls["user_data_dir"] = str(user_data_dir)
+        calls.update(kwargs)
+        raise sync_api.Error("stop after recording launch arguments")
+
+    _fake_playwright_session(monkeypatch, launch_persistent_context=fake_lpc)
+    # The harness wraps launcher errors; the recorded arguments prove the policy.
+    with pytest.raises(RuntimeError, match="Google Chrome is not installed") as excinfo:
+        run_capture(
+            env={"DOCUBYE_REAL_SOURCE": "1"},
+            prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
+            output_dir=tmp_path / "captures" / "google",
+        )
+    assert "stop after recording" in str(excinfo.value.__cause__)
+    assert calls["channel"] == "chrome"
+    assert calls["headless"] is False
+    assert calls["user_data_dir"].endswith("chrome-profile")
+    assert "captures" in calls["user_data_dir"]
+
+
+def test_live_path_reports_missing_chrome_clearly(monkeypatch, tmp_path):
+    import playwright.sync_api as sync_api
+
+    def fake_lpc(user_data_dir, **kwargs):
+        raise sync_api.Error("Executable doesn't exist")
+
+    _fake_playwright_session(monkeypatch, launch_persistent_context=fake_lpc)
+    with pytest.raises(RuntimeError, match="Google Chrome is not installed"):
+        run_capture(
+            env={"DOCUBYE_REAL_SOURCE": "1"},
+            prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
+            output_dir=tmp_path / "captures",
+        )
+
+
+def test_fixture_path_keeps_playwright_chromium(monkeypatch, tmp_path):
+    calls: dict = {}
+
+    def fake_launch(**kwargs):
+        calls["launch"] = kwargs
+        raise _StopCapture()
+
+    def fake_lpc(user_data_dir, **kwargs):
+        calls["persistent"] = True
+        raise _StopCapture()
+
+    _fake_playwright_session(
+        monkeypatch, launch=fake_launch, launch_persistent_context=fake_lpc
+    )
+    with pytest.raises(_StopCapture):
+        run_capture(
+            env={"DOCUBYE_REAL_SOURCE": "1"},
+            prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
+            output_dir=tmp_path / "captures",
+            start_url="http://127.0.0.1:9/websearch/contact/content_removal_form?hl=en",
+            headless=True,
+        )
+    assert calls["launch"] == {"headless": True}
+    assert "persistent" not in calls
+
+
+def test_live_path_refuses_headless(monkeypatch, tmp_path):
+    _fake_playwright_session(monkeypatch)
+    with pytest.raises(ValueError, match="headed browser"):
+        run_capture(
+            env={"DOCUBYE_REAL_SOURCE": "1"},
+            prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
+            output_dir=tmp_path / "captures",
+            headless=True,  # start_url defaults to the live URL
+        )
