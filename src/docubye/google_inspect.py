@@ -113,6 +113,53 @@ def websocket_inspection_allowed(_url: str) -> bool:
     return False
 
 
+def _install_popup_guard(context, main_page_holder: dict) -> None:
+    """Close unexpected pages, but never the designated main page.
+
+    Root cause of the headed-handoff TargetClosedError: the previous handler
+    closed every page emitted by the context "page" event. That event fires
+    for the main page itself and for the replacement tab Google's redirect
+    chain delivers the wizard in, so the guard closed the page holding the
+    content; the next locator call on the dead reference raised
+    TargetClosedError. The holder starts empty precisely so the first page
+    (the main one being created) is never treated as a popup.
+    """
+
+    def close_popup(new_page) -> None:
+        main_page = main_page_holder.get("page")
+        if main_page is None or new_page is main_page:
+            return
+        try:
+            new_page.close()
+        except PlaywrightError:
+            pass
+
+    context.on("page", close_popup)
+
+
+def _resolve_working_page(context, page, allow_request=inspection_request_allowed):
+    """Return a usable page: the main page if open, else a single guarded survivor.
+
+    Returns None when the window is gone or what remains cannot be trusted,
+    so callers can record a clean note instead of raising TargetClosedError.
+    """
+    try:
+        if page is not None and not page.is_closed():
+            return page
+    except PlaywrightError:
+        pass
+    try:
+        survivors = [candidate for candidate in context.pages if not candidate.is_closed()]
+    except PlaywrightError:
+        return None
+    if len(survivors) != 1:
+        return None
+    candidate = survivors[0]
+    if candidate.url == "about:blank" or allow_request(candidate.url, "GET"):
+        return candidate
+    return None
+
+
 def _safe_report_url(url: str) -> str:
     """Remove query strings and fragments before adding a URL to the report."""
     parsed = urlsplit(url)
@@ -217,6 +264,7 @@ def _perform_human_handoff(
     page,
     report: InspectionReport,
     prompt_fn: Callable[[str], str],
+    context=None,
 ) -> None:
     """Pause for a person while retaining the read-only request guard."""
     challenge_before = _verification_challenge_visible(page)
@@ -227,6 +275,19 @@ def _perform_human_handoff(
 
     prompt_fn(HUMAN_HANDOFF_PROMPT)
     report.human_handoff_used = True
+
+    if context is not None:
+        resolved = _resolve_working_page(context, page)
+        if resolved is None:
+            report.notes.append(
+                "The browser window was closed during the handoff; no further metadata was captured."
+            )
+            return
+        if resolved is not page:
+            report.notes.append(
+                "The wizard continued in a replacement tab; inspection adopted the surviving guarded page."
+            )
+            page = resolved
 
     report.final_url = _safe_report_url(page.url)
     report.selected_steps = _selected_choice_labels(page)
@@ -314,18 +375,23 @@ def inspect_google_contact_form(
         context = browser.new_context(service_workers="block", accept_downloads=False)
         context.route("**/*", guard)
         context.route_web_socket(lambda _url: True, block_websocket)
+        main_page_holder: dict = {}
+        _install_popup_guard(context, main_page_holder)
         page = context.new_page()
+        main_page_holder["page"] = page
         page.set_default_timeout(6_000)
 
-        def close_popup(new_page) -> None:
-            try:
-                new_page.close()
-            except PlaywrightError:
-                pass
-
-        context.on("page", close_popup)
         try:
             page.goto(GOOGLE_FORM_URL, wait_until="domcontentloaded", timeout=20_000)
+            resolved = _resolve_working_page(context, page)
+            if resolved is None:
+                report.notes.append(
+                    "The wizard page closed during navigation and no usable guarded page remained. "
+                    "No metadata was captured."
+                )
+                return report
+            page = resolved
+            main_page_holder["page"] = page
             report.final_url = _safe_report_url(page.url)
             parsed_final = urlsplit(page.url)
             if parsed_final.scheme != "https" or parsed_final.hostname != "support.google.com":
@@ -334,7 +400,7 @@ def inspect_google_contact_form(
 
             report.verification_challenge_detected = _verification_challenge_visible(page)
             if human_handoff:
-                _perform_human_handoff(page, report, prompt_fn)
+                _perform_human_handoff(page, report, prompt_fn, context=context)
                 return report
 
             # CAPTCHA is a hard stop in automatic mode. Do not interact with

@@ -9,5 +9,7 @@ playwright-report/
 test-results/
 *.sqlite3
 docubye-fixture-state.json
+# Live captures are sanitized but never committed.
+captures/
 src/docubye.egg-info/
 *.egg-info/
