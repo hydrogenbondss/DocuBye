@@ -1,33 +1,29 @@
 # Integration: Google Search personal contact-info removal
 
 **Status:** Read-only inspection and dry-run planning implemented. **Submission is intentionally NOT implemented.**  
-**Last tested:** 15 November 2026 — offline fixtures green; live run #2 attempted (guard correct; sign-in stonewalled on the automation-flagged Chrome for Testing binary; fix: owner's real Chrome via persistent context). The live branch was manually confirmed at the UI-label level on 31 October 2026 (see [FIRST_SOURCE_REVIEW.md](../FIRST_SOURCE_REVIEW.md)); the live site has not been successfully re-driven by this adapter yet.
+**Last tested:** 15 November 2026 — offline fixtures green; automated live capture attempted (runs of 14–15 Nov) and abandoned: Google stonewalls automation-controlled browsers at sign-in, and DocuBye does not evade that. The supported validation path is manual capture (below). The live branch was manually confirmed at the UI-label level on 31 October 2026 (see [FIRST_SOURCE_REVIEW.md](../FIRST_SOURCE_REVIEW.md)).
 
 ## Headed handoff repair (14 November 2026)
 
 **Root cause of the TargetClosedError:** the inspector's popup guard closed every page emitted by the browser context's `page` event. That event fires for the main page itself and for the replacement tab Google's redirect chain can deliver the wizard in, so the guard destroyed the page holding the content; the next locator call on the dead reference raised `TargetClosedError`. **Fix:** the guard now tracks a designated main page and never closes it, and after navigation and after the human handoff the inspector resolves the working page — adopting a single surviving guarded tab, or recording a clean note if the window is gone. Offline regression tests simulate popups, replacement tabs, and window closure.
 
-## Live read-only validation harness
+## Live read-only validation harness (deprecated)
 
-`docubye-capture-google-fixtures` runs a headed, human-driven capture: the owner signs in themselves (the agent never touches credentials), the agent performs only the read-only navigation, and each step's HTML is sanitized (emails, phone numbers, names, avatars, URL/session tokens, account labels) with the redaction diff shown before anything is saved. Captures land in `captures/` (gitignored). Each run ends with a machine-readable selector validation report (found / missing / ambiguous per step, no page content).
+`docubye-capture-google-fixtures` was a headed, human-driven capture tool. **Its live path is deprecated** (see the runs below); its fixture path remains in use for offline tests. Do not run it against the live site.
 
-- Requires `DOCUBYE_REAL_SOURCE=1` and a typed account confirmation; refuses otherwise.
+### Live runs, 14–15 November 2026 — automated capture attempted and abandoned
 
-### Live run, 14 November 2026 — failed closed, as designed
+Run #1 (14 Nov) failed closed: the live allowlist blocked `accounts.google.com`, so sign-in was impossible; zero data captured. Run #2 (15 Nov), with the two-phase guard: the guard blocked only telemetry/widgets and no auth traffic, yet sign-in hung indefinitely after email entry — the signature of Google stonewalling automation-controlled browser binaries (Chrome for Testing), including a real-Chrome persistent profile under automation control.
 
-The first live capture run stopped safely: the route guard's live-mode allowlist permitted only the wizard domain, so `accounts.google.com` was blocked and human sign-in was impossible. Zero files saved, zero selector checks, no submission, redacted notes only.
+**Decision:** automated live capture is abandoned. DocuBye's no-evasion principles mean we will not fight Google's automation detection. No browser automation approaches sign-in, ever. The `docubye-capture-google-fixtures` live path is **deprecated**; its fixture path remains in use for offline tests.
 
-### Live run #2, 15 November 2026 — guard correct; sign-in stonewalled on the automation binary
-
-With the two-phase guard, **no `accounts.google.com` request was blocked** — the guard blocked only telemetry and widget endpoints (`google-analytics`, `googletagmanager`, `play.google.com/log`, `ogads`/`ogs` widgets, and `support.google.com` `/apis/cuf*` and `/s/infolog` — see the note below). Yet sign-in hung indefinitely after email entry. This is the signature of Google stonewalling automation-flagged binaries (Chrome for Testing). The guard behaved correctly; the browser binary was the problem.
-
-**Fix:** the live path now launches the owner's real installed Google Chrome (`channel="chrome"`) via a persistent profile under the gitignored `captures/` directory. There are deliberately **no anti-detection measures** — no `navigator.webdriver` tampering, no user-agent spoofing, no fingerprint tricks. The human performs all authentication in a normal browser binary; DocuBye does not disguise automation from Google. Tests and fixtures keep the Playwright-managed Chromium.
+**The supported validation path is manual capture** (below): the owner does everything in their own everyday browser, and the tooling only reads locally saved HTML files.
 
 **Allowlist unchanged.** Every host blocked in run #2 was telemetry or widgets. Note: `support.google.com` `/apis/cuf*` and `/s/infolog` were observed blocked while the wizard never loaded. Only if the wizard fails to render *after* a successful sign-in may these be evaluated — one by one, each with written justification — and never implicitly.
 
 ### Two-phase guard (15 November 2026)
 
-The guard now has two phases, because the "no POST" invariant applies to agent-driven traffic, not to the human's own authentication:
+The guard now has two phases, because the "no POST" invariant applies to agent-driven traffic, not to the human's own authentication. It remains in force for the (deprecated) live path and the fixture-based tests:
 
 1. **Sign-in phase** — GET/POST/HEAD to `accounts.google.com` (the human's sign-in form; every interaction is human-driven, the agent sends nothing). GET/HEAD only to the wizard host and static asset hosts.
 2. **Wizard phase** — after the wizard domain is verified as loaded, the guard re-locks to GET/HEAD only on the wizard and static hosts; `accounts.google.com` itself becomes unreachable.
@@ -43,6 +39,21 @@ If the redirect chain involves any other host, the run stops with a redacted not
 | Telemetry (`play.google.com`, `google-analytics.com`, `googletagmanager.com`, `ogs.google.com`, …) | neither | none | Not in any allowlist; blocked in both phases |
 
 The handoff gate now requires an empty Enter (non-empty input re-prompts — a pasted shell command previously proceeded) and verifies the wizard domain is actually loaded before capturing; otherwise it pauses with a redacted note instead of producing an empty report.
+
+## Manual capture (supported path)
+
+No browser automation is involved. You do everything in your own everyday browser; the tooling only reads files you saved locally.
+
+1. In your own browser, sign in to Google as yourself and open the removal form: https://support.google.com/websearch/contact/content_removal_form?hl=en
+2. Walk the wizard steps manually, one step at a time. At each step, save the page: **File → Save As → "Webpage, HTML Only"** into a new local folder, naming files in order: `01-start.html`, `02-personal-info.html`, `03-contact-branch.html`, and so on.
+3. Run the offline report tool on that folder:
+
+   `docubye-google-report --html-dir <your-folder>`
+
+4. For each file the tool prints a redaction summary (counts and types of removed items, never the values), asks whether to keep a sanitized copy (opt-in, saved to the gitignored `captures/` directory), and runs the selector validation offline.
+5. The tool prints a machine-readable JSON report: per-step selector found/missing/ambiguous, processed file names, and blocked asset-request count. It contains no page content and no personal values. Share only this report if you want the fixtures updated.
+
+The tool never touches the network: all page requests are blocked, and the offline browser only ever loads the sanitized copy of each file.
 
 ## What this integration does
 

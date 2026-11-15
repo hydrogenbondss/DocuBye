@@ -277,15 +277,19 @@ def run_capture(
     prompt_fn: Callable[[str], str] = input,
     env: dict[str, str] | None = None,
     headless: bool = False,
+    live: bool = True,
     auth_host: str = AUTH_HOST,
     wizard_host: str = WIZARD_HOST,
     static_hosts: frozenset = frozenset(STATIC_HOSTS),
 ) -> CaptureResult:
     """Headed, human-driven read-only capture. Never fills, never submits.
 
-    ``start_url``, the host parameters, and ``headless`` exist so tests can run
-    the same flow offline against sanitized fixtures; production use keeps the
-    defaults (live URL, live two-phase guard, headed).
+    ``live=True`` (the default) launches the owner's real Chrome against the
+    live site and is DEPRECATED: Google stonewalls automation-controlled
+    browsers at sign-in and DocuBye does not evade that. The supported
+    validation path is manual capture (docubye-google-report). Tests pass
+    ``live=False`` with a fixture ``start_url`` to run the same flow offline
+    with the Playwright-managed Chromium.
     """
     env = os.environ if env is None else env
     if env.get(REAL_SOURCE_ENV) != "1":
@@ -307,7 +311,6 @@ def run_capture(
 
     result = CaptureResult()
     output = Path(output_dir)
-    live = start_url == LIVE_FORM_URL
     profile_dir = output.parent / "chrome-profile"
 
     with sync_playwright() as playwright:

@@ -125,6 +125,7 @@ def _offline_capture(base, tmp_path, answers, calls, **overrides):
         "prompt_fn": _scripted_prompts(answers, calls),
         "env": {"DOCUBYE_REAL_SOURCE": "1"},
         "headless": True,
+        "live": False,
         "auth_host": "127.0.0.1",
         "wizard_host": "127.0.0.1",
     }
@@ -256,6 +257,7 @@ def test_wizard_not_loaded_pauses_with_redacted_note(chromium, tmp_path):
             prompt_fn=_scripted_prompts([ACCOUNT_CONFIRMATION, ""], calls),
             env={"DOCUBYE_REAL_SOURCE": "1"},
             headless=True,
+            live=False,
             auth_host="127.0.0.1",
             wizard_host="support.google.com",  # not what the fixture serves
         )
@@ -348,6 +350,7 @@ def test_fixture_path_keeps_playwright_chromium(monkeypatch, tmp_path):
             output_dir=tmp_path / "captures",
             start_url="http://127.0.0.1:9/websearch/contact/content_removal_form?hl=en",
             headless=True,
+            live=False,
         )
     assert calls["launch"] == {"headless": True}
     assert "persistent" not in calls
