@@ -10,26 +10,35 @@ This roadmap is deliberately evidence-gated. Do not skip ahead based on a succes
 - [x] Write initial product brief.
 - [x] Record the proposed architecture and guardrails.
 - [x] Define a simulated-first acceptance test.
-- [ ] Confirm the first implementation stack and record the decision.
+- [x] Confirm the first implementation stack and record the decision (see [stack decision record](STACK_DECISION.md)).
 - [ ] Add contribution, reporting, and security guidance before inviting outside contributors.
 
 **Exit criteria:** Scope, permissions, data handling, and the first workflow are clear enough to implement without inventing product policy during coding.
 
 ## Milestone 1 — Synthetic browser workflow
 
-- [ ] Create a local mock site that represents a typical opt-out form.
-- [ ] Create a synthetic profile and a fixture with no real personal information.
-- [ ] Navigate to the form and map the approved fields.
-- [ ] Show the request destination and data summary.
-- [ ] Block submission until approval is explicitly given.
-- [ ] Capture minimal task evidence and implement clear state transitions.
-- [ ] Add tests for incorrect mappings, prompt injection, timeout, retry, and duplicate-submission prevention.
-- [ ] Demonstrate a human handoff for a simulated CAPTCHA or identity check.
+**Status:** Ready for review — synthetic scope only. CI evidence is in the [Actions tab](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml); nothing here demonstrates real-source removal.
+
+- [x] Create a local mock site that represents a typical opt-out form.
+- [x] Create a synthetic profile and a fixture with no real personal information.
+- [x] Navigate to the form and map the approved fields.
+- [x] Show the request destination and data summary.
+- [x] Block submission until approval is explicitly given.
+- [x] Capture minimal task evidence and implement clear state transitions.
+- [x] Add tests for incorrect mappings, prompt injection, timeout, retry, and duplicate-submission prevention.
+- [x] Demonstrate a human handoff for a simulated CAPTCHA or identity check.
+
+_Amendment (PR #2 review): recovery and persistence requirements added explicitly, not substituted for the originals._
+
+- [x] Persist task state (task ID, approval state, submission key, and confirmation ID) in SQLite.
+- [x] Recover an interrupted (UNKNOWN) submission only via a read-only status lookup by idempotency key; automatic blind retry stays disabled.
+- [x] Keep approvals single-use across process restarts.
 
 **Exit criteria:** Repeatable automated tests prove the permission gates and state machine work. Screenshots or logs do not leak personal values.
 
 ## Milestone 2 — First real source
 
+- [ ] Review the route guard for downloads, browser protocols, and remaining navigation edge cases (prerequisite for any live adapter; moved here from Milestone 1).
 - [ ] Select one source after reviewing the official removal process, terms, required fields, and verification method.
 - [ ] Implement a narrowly scoped source adapter.
 - [ ] Test on the official workflow without submitting a real user's request.
@@ -55,7 +64,7 @@ This roadmap is deliberately evidence-gated. Do not skip ahead based on a succes
 - [ ] Add discovery sources incrementally, starting with user-provided URLs and narrowly scoped official/search sources.
 - [ ] Add scheduled rechecks where permitted and technically meaningful.
 - [ ] Separate removal at the original source from search-result delisting and cached copies.
-- [ ] Add jurisdiction-specific workflows only after documenting the applicable rules and limitations.
+- [ ] Add jurisdiction-specific workflows only after documenting applicable rules and limitations.
 
 **Exit criteria:** Every finding has a source, confidence level, recommended action, and clear verification status.
 

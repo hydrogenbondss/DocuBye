@@ -1,46 +1,84 @@
-# DocuGone
+# DocuBye
+
+[![tests](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml/badge.svg)](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml)
 
 **An open-source AI agent for removing your own digital footprint.**
 
-DocuGone aims to do more than list privacy risks or generate opt-out instructions. It is being designed to carry out authorised removal workflows in a real browser, handle routine steps automatically, ask for help when a site requires human judgement, and keep an honest record of what happened.
+DocuBye aims to do more than list privacy risks or generate opt-out instructions. It is being designed to carry out authorised removal workflows in a real browser, handle routine steps automatically, ask for help when a site requires human judgement, and keep an honest record of what happened.
 
-> **Project status: early planning.** No working browser agent or removal integrations have been implemented yet. The roadmap starts with a controlled test workflow before any live removal submissions.
+> **Project status: early prototype.** The current runnable workflow uses a local synthetic site only. It does not connect to real data brokers and does not submit real removal requests.
 
-## The intended experience
+## Current prototype
 
-1. **Find** — identify an exposure from a user-provided URL or a supported source.
-2. **Understand** — determine what information is exposed and which removal path is available.
-3. **Act** — navigate the site's official workflow, fill the appropriate fields, and perform the steps the user has authorised.
-4. **Escalate** — pause for CAPTCHA, identity checks, legal attestations, unexpected requests, or other steps that require the person.
-5. **Verify** — track the outcome and distinguish a sent request from a confirmed removal.
+- Local mock opt-out site with synthetic data loaded from a fixture file.
+- Playwright-controlled navigation and deterministic, offline field mapping.
+- Explicit request review and approval before synthetic submission.
+- Guards for the exact local origin, expected endpoints, reviewed form payload, and one-time approval.
+- Blocks external HTTP paths and WebSockets during the synthetic workflow.
+- Human handoff for verification challenges and unexpected requests.
+- A state machine that distinguishes submission from a separately verified result.
+- SQLite task persistence: task ID, full status history, approval state, submission (idempotency) key, and confirmation ID.
+- Recovery of interrupted submissions via a read-only status lookup by idempotency key. Automatic blind retry is disabled; approvals stay single-use across process restarts.
+
+## Quick start
+
+Requires Python 3.11+ and Chromium supported by Playwright.
+
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -e '.[dev]'
+    python -m playwright install chromium
+    pytest -q
+
+Run the local demo:
+
+    docubye run --scenario normal
+
+The CLI displays the destination and data categories, then asks you to explicitly approve the synthetic submission. Try the safe-pause scenarios:
+
+    docubye run --scenario challenge
+    docubye run --scenario unexpected
+    docubye run --scenario early-submit
+    docubye run --scenario verified
+
+The early-submit scenario intentionally attempts a POST before approval. The browser request guard should block it. The verified scenario is a simulated fixture response, not evidence about a real website.
+
+## Interrupted-submission recovery demo
+
+The timeout-after-submit scenario records the POST but withholds the acknowledgement marker, so the run ends in the UNKNOWN state:
+
+    docubye run --scenario timeout-after-submit
+
+The CLI prints a recovery command with the task ID. Run it to perform a read-only status lookup by the persisted idempotency key:
+
+    docubye recover <task-id>
+
+Recovery finds the original submission, records its confirmation ID, and moves the task to awaiting_confirmation without sending a second request. Nothing ever resubmits automatically.
+
+## Resuming a paused task
+
+When the workflow pauses (awaiting_user), for example at a simulated verification challenge, a person must resolve the blocking step first. Resuming then continues the same task under the same task ID:
+
+    docubye resume <task-id> --note "Operator cleared the simulated check" --confirm-human-resolution
+
+The note is redacted and recorded in the task history. The resumed task is re-inspected and freshly reviewed; it can never resume into submission, and rejection is terminal — a rejected task requires a fresh task.
 
 ## Principles
 
-- **The user owns the task.** Work only on the user's own information or information they are authorised to manage.
-- **Local-first.** Keep browser sessions and task records on the user's machine by default. Clearly disclose any data sent to a remote model or service.
-- **Human control without busywork.** The user authorises the scope; the agent handles routine steps within that scope and stops when the action falls outside it.
-- **Evidence over promises.** A request being submitted is not proof that information was deleted.
-- **No evasion.** Do not bypass CAPTCHAs, access controls, identity checks, or a site's explicit human-verification steps.
-- **Minimise sensitive data.** Do not log personal fields, cookies, credentials, or full page contents unnecessarily.
+- Work only on the user's own information or information they are authorised to manage.
+- Keep browser sessions and task records local by default.
+- Disclose remote model data flow.
+- Never bypass CAPTCHAs, access controls, identity checks, or a site's human-verification steps.
+- Keep personal fields out of ordinary logs, screenshots, and test reports.
+- Never label a request removed just because it was submitted.
 
-## Development
+## Documentation
 
-Read these before implementation:
-
-- [Product brief](docs/PRODUCT_BRIEF.md) — problem, intended user experience, scope, and guardrails.
-- [Architecture proposal](docs/ARCHITECTURE.md) — recommended components and technical decisions.
-- [Roadmap](docs/ROADMAP.md) — incremental milestones and acceptance criteria.
-
-The first technical milestone is a simulated removal workflow using synthetic data. It must prove that DocuGone can navigate a form, map fields correctly, pause for an approval gate, record evidence, and report status accurately before it is connected to real personal information.
-
-## What DocuGone cannot promise
-
-No tool can guarantee that every trace of a person will disappear from the internet. Some information cannot be removed, some sources have lawful retention requirements, and copies may persist outside the original site's control. DocuGone should report limitations plainly and never label a request "removed" without adequate verification.
-
-## Contributing
-
-The project is at the design stage. Please open an issue before contributing a new integration or proposing a significant architectural change. Every integration should document the supported workflow, required data, verification method, failure states, and the last date it was tested.
+- Product brief: docs/PRODUCT_BRIEF.md
+- Architecture proposal: docs/ARCHITECTURE.md
+- Roadmap: docs/ROADMAP.md
+- Stack decision record: docs/STACK_DECISION.md
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See LICENSE.

@@ -1,0 +1,6 @@
+{
+  "description": "Fixed synthetic profile for the local mock workflow. Never put real personal data in this file.",
+  "full_name": "Alex Example",
+  "email": "alex.example@example.test",
+  "phone": "+1 202 555 0147"
+}

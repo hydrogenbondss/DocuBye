@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
+*.sqlite3
+docubye-fixture-state.json
+src/docubye.egg-info/
+*.egg-info/

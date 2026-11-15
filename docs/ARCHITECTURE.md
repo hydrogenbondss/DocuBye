@@ -1,78 +1,59 @@
 # Architecture proposal
 
-**Status:** Proposed starting point. Validate with a small proof of concept before locking major dependencies.
+**Status:** Synthetic workflow implemented with durable, restart-safe recovery. Live-site integration remains blocked on a broader security review; first-source research and model-assisted field mapping live on separate draft branches.
 
 ## Design goal
 
 Make browser automation reliable enough for privacy-sensitive workflows without giving a general-purpose model unlimited authority over the user's browser, data, or identity.
 
-## Proposed components
+## Current components
 
-### 1. User interface
+### 1. Workflow controller
 
-Start with a local application that lets the user define a task, inspect the intended request, approve it, follow the agent's progress, and take over when required. A polished multi-account cloud service is not part of the MVP.
+The agent module owns the permitted workflow. It accepts only the exact 127.0.0.1 loopback origin, observes the page, requests a field mapping, prepares a review summary, waits for explicit approval, and records a bounded set of state transitions. No model decides whether the submission gate is open.
 
-### 2. Task orchestrator
+### 2. Browser driver and request guard
 
-A small, explicit state machine should own the workflow. It decides which actions are permitted, tracks state, prevents duplicate submissions, and provides a resumable pause for human intervention. The language model proposes or performs bounded actions; it does not own the permission model.
+Playwright controls the browser. A context-level route handler:
+- Allows only a small set of expected mock-site paths and methods.
+- Blocks external hosts, including redirects, popup navigation, and external frames.
+- Blocks POSTs to /submit without an active one-time approval.
+- Requires the approved POST to be a main-frame document navigation.
+- Compares the outgoing form payload against the exact in-memory payload shown for review.
+- Consumes the approval before forwarding the first permitted submission, so a later request cannot reuse it.
+- Blocks service workers and routes WebSocket connections to a non-forwarding mock handler.
 
-### 3. Browser driver
+The guard is intended for a controlled local fixture. It is not a production-grade browser sandbox. Live-site integrations require a separate security review, more comprehensive navigation controls, and tests around downloads, browser protocols, and remaining navigation edge cases.
 
-Use Playwright for controlled browser interaction, test fixtures, deterministic locators, screenshots, and assertions. Evaluate the open-source Browser Use agent library as an optional navigation layer for unfamiliar or variable pages. Keep the browser-agent interface replaceable so the product is not locked to one model or hosted browser service.
+### 3. Form planner
 
-Recommended approach: deterministic site-specific steps wherever the workflow is known; AI-guided exploration only where variation makes fixed steps insufficient. Don't ask an LLM to rediscover a stable form from scratch on every run.
+The planner module defines a protocol and an offline, deterministic rule-based mapping. The deterministic path is the milestone baseline: it must be proven before any model-assisted variant is considered. A model-assisted mapper, if reintroduced, must receive only field metadata (name, label, input type, required flag), never profile values, cookies, or credentials, and its output must be validated against an allowlist. Any future AI-navigation layer must remain behind an independently enforced navigation boundary.
 
-### 4. Source adapter registry
+### 4. Synthetic mock site
 
-Each supported source should declare, in version-controlled code or data:
+The mock-site module serves the form and scenarios for human verification, unexpected requests, pre-approval submission, outbound requests, redirects, popups, external frames, changed form destinations, changed payloads, duplicate attempts after approval, and an acknowledgement timeout after a recorded POST. All test personal data is synthetic and loaded from a fixture file.
 
-- Source name and official domain(s).
-- Official removal workflow and documentation URLs.
-- Information fields required and why they are required.
-- Supported jurisdictions or eligibility caveats, if known.
-- Steps the agent may perform.
-- Mandatory human checkpoints.
-- Confirmation and verification method.
-- Retry and duplicate-submission policy.
-- Known limitations, last-tested date, and integration tests.
+Submissions are idempotent: the mock derives a submission key from the exact form payload, issues a confirmation ID once per key, and replays the same confirmation for repeated POSTs without counting them twice. A read-only /status endpoint looks up submissions by key, which is what makes recovery without resubmission possible.
 
-Adapters must be narrowly scoped. The agent must not follow a redirect to an unrelated domain and continue sending personal data without reassessing the destination.
+### 5. Task state, persistence, and recovery
 
-### 5. Local state and evidence
+The models module implements a typed state machine and a one-time submission-attempt guard. Public task records contain timestamps, generic action descriptions, status, and a task ID—not profile values or full page content. The verified-removed state is only reached when the fixture's separate verification endpoint confirms removal.
 
-Use SQLite for task metadata in the MVP. Avoid persisting raw personal fields by default. Store secrets in the operating system's secure credential store if persistence is later needed. Evidence should be minimal and redacted: timestamps, source, action taken, status, and a confirmation reference where appropriate—not full page dumps or session cookies.
+The store module persists each task in SQLite: task ID, full event history, approval state, submission (idempotency) key, and confirmation ID. Approval consumption is atomic and survives process restarts, so an approval can never be used twice, even by a new process reopening the same store file.
 
-SQLite by itself is not encryption. Do not describe the database as encrypted unless an encryption layer is implemented and tested.
+An interrupted submission ends in UNKNOWN. The only exit from UNKNOWN is the recovery path: a read-only GET to the mock /status endpoint with the persisted idempotency key. If the original submission is found, its confirmation ID is recorded and the task moves to awaiting_confirmation. Automatic blind retry is disabled; recovery never sends a second POST.
 
-### 6. Model provider interface
+## Proposed tools
 
-Keep the model provider configurable. Local inference can improve privacy but may reduce capability or require substantial hardware. Hosted models can improve task performance but may receive page text and the minimum personal information included in prompts. Make this data flow visible and configurable; do not silently send all page content or the full identity profile.
+- Python 3.11+
+- Playwright for browser control and end-to-end testing
+- pytest for workflow and safety tests
+- SQLite (standard library) for task persistence
+- See the [stack decision record](STACK_DECISION.md) for deliberate deviations and their rationale.
 
-### 7. Tests and development tooling
+## Before connecting to a real source
 
-Initial recommendation:
-
-- Python 3.12+ for the orchestrator and Browser Use evaluation.
-- Playwright for browser control and end-to-end test coverage.
-- Pydantic-style schemas (or equivalent typed models) for task data and adapter contracts.
-- SQLite for local task metadata.
-- pytest for state machine, adapter, and browser workflow tests.
-- uv for Python dependency and environment management.
-- A local mock opt-out site with synthetic data for all initial end-to-end tests.
-
-Confirm the exact tool versions and package APIs at implementation time. Avoid adding a frontend framework, cloud database, queue service, or container orchestration before a working vertical slice needs it.
-
-## Critical safety controls
-
-- Explicit task scope and user authorisation.
-- Approval gate before external submission in the MVP.
-- Stop on CAPTCHA, identity verification, login challenge, payment, legal attestation, unclear consent, or unexpected data requests.
-- Treat webpage content as untrusted; resist prompt injection.
-- Never extract or expose passwords, cookies, authentication tokens, or unrelated page data to the model.
-- Redact logs and screenshots; allow users to delete local task history.
-- Prevent duplicate submission after a timeout or resume.
-- Do not evade a website's security controls or claim an unverified removal.
-
-## Architecture decision to validate first
-
-Run one synthetic workflow through Playwright, then compare adding Browser Use for the uncertain navigation step. Choose the smallest configuration that is sufficiently robust, observable, and privacy-preserving. Do not adopt hosted browser infrastructure for the initial proof of concept.
+1. Review and test redirects, popup tabs, frames, downloads, browser protocols, request bodies, and navigation changes.
+2. Choose one official removal workflow and document its terms, eligibility, required fields, verification method, and human checkpoints.
+3. Implement a source-specific adapter rather than allowing arbitrary model-generated clicks.
+4. Keep pre-submission review and explicit approval enabled until the integration has adequate safety evidence.
