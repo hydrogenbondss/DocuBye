@@ -53,6 +53,7 @@ _Amendment (first-source research branch): candidate selected — Google's offic
 - [x] Add a read-only inspector that records visible field metadata and stops before branch selection whenever a CAPTCHA/human-verification element is visible.
 - [x] Add a headed operator-handoff mode: manual observation only, no input filling/value reads, and the exact GET/HEAD host guard remains enforced.
 - [x] Manually confirm in the user's regular browser that selecting “Content contains your personal information” reaches the live contact-info form state and exposes the required address/phone/email value prompt (31 October 2026; no values entered and nothing submitted).
+- [x] Implement read-only inspection and dry-run planning with sanitized offline fixtures (submission intentionally not implemented; see docs/integrations/google.md).
 - [ ] Capture the exact choices for the personal-information selector and doxxing question, plus all lower-page fields and declarations.
 - [ ] Diagnose the headed Playwright handoff failure (`TargetClosedError` / no usable page) and obtain safe field metadata without weakening the no-submission boundary.
 - [ ] Confirm stable active-field selectors/attributes and all required flags; pause on uncertainty.

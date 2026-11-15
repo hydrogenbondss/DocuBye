@@ -82,6 +82,16 @@ The inspector never reads input values, cookies, request bodies, or screenshots.
 
 A manual inspection in the user's regular browser on 31 October 2026 confirmed that selecting “Content contains your personal information” reaches the live contact-info form state. The visible prompts include the address/phone/email value as it appears on the page, a separate email field as it appears on the page, and a required question about malicious or threatening intent. No values were entered and nothing was submitted. The exact selector choices, doxxing answer choices, lower-page fields, stable DOM selectors, and required flags are still being recorded. The headed Playwright handoff separately failed to render a usable page (`TargetClosedError`), so this manual observation does not mean the automated inspector or a live adapter is complete. The contact-info branch has been manually confirmed at the UI-label level only; no live adapter or submission capability is enabled.
 
+### Read-only dry-run adapter (Milestone 2, session 1)
+
+**Read-only inspection implemented; submission intentionally not yet implemented.** The adapter navigates the documented flow, pauses at sign-in walls and CAPTCHAs, collects field metadata, and produces a dry-run plan — then stops. No code path fills a field, clicks Submit, or sends a request body.
+
+    docubye-google-dry-run                      # offline fixtures (default, CI-safe)
+    docubye-google-dry-run --scenario captcha   # pause-path scenarios
+    DOCUBYE_REAL_SOURCE=1 docubye-google-dry-run --live   # explicit opt-in, read-only
+
+Details, failure states, and boundaries: docs/integrations/google.md.
+
 ## Principles
 
 - Work only on the user's own information or information they are authorised to manage.
@@ -97,6 +107,7 @@ A manual inspection in the user's regular browser on 31 October 2026 confirmed t
 - Architecture proposal: docs/ARCHITECTURE.md
 - Roadmap: docs/ROADMAP.md
 - Stack decision record: docs/STACK_DECISION.md
+- Google integration (read-only dry run): docs/integrations/google.md
 
 ## Licence
 
