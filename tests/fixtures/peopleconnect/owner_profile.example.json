@@ -1,0 +1,9 @@
+{
+  "_comment": "Synthetic example for tests and docs. Real profiles live in gitignored captures/profile.local.json — never commit real values.",
+  "contact_email": "alex.example@example.test",
+  "first_name": "Alex",
+  "last_name": "Example",
+  "middle_name": "",
+  "previous_names": [],
+  "date_of_birth": "1990-01-01"
+}
