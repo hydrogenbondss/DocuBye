@@ -1,0 +1,13 @@
+{
+  "_comment": "Synthetic example for tests and docs. Real profiles live in gitignored captures/profile.local.json — never commit real values.",
+  "contact_email": "alex.example@example.test",
+  "phone_number": "+1 202 555 0147",
+  "listing_urls": [
+    "https://www.whitepages.com/name/Alex-Example/Springfield-CA-synthetic1",
+    "https://www.whitepages.com/name/Alex-Example/Portland-OR-synthetic2"
+  ],
+  "first_name": "Alex",
+  "last_name": "Example",
+  "city": "Springfield",
+  "state": "CA"
+}
