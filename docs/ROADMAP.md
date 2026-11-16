@@ -89,6 +89,7 @@ _Amendment (Milestone 4 session 1): guided data-broker integrations — the agen
 
 - [x] Extract the guided-submission core (packet, walkthrough, typed gate, single-use approval, evidence-gated verify) into a source-agnostic module.
 - [x] First data-broker adapter: guided Spokeo opt-out (`docubye submit-spokeo`), owner-executed with owner-solved CAPTCHA; evidence-gated verification. Not yet tested against the live site; owner rehearsal pending.
+- [x] Second data-broker adapter: guided PeopleConnect Suppression Center flow (`docubye submit-peopleconnect`), owner-executed by design (PeopleConnect refuses authorized agents); suppression is documented as not deletion. Not yet tested against the live site; owner rehearsal pending.
 - [ ] Add discovery sources incrementally, starting with user-provided URLs and narrowly scoped official/search sources.
 - [ ] Add scheduled rechecks where permitted and technically meaningful.
 - [ ] Separate removal at the original source from search-result delisting and cached copies.

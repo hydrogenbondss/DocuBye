@@ -136,6 +136,7 @@ def _prompt_until_empty(prompt_fn: Callable[[str], str], message: str) -> None:
 
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE_RE = re.compile(r"\+\d[\d\s().-]{7,}\d")
+_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _TOKEN_PARAM_RE = re.compile(
     r"(?i)\b(sid|ssid|hsid|apisid|sapisid|token|sig|signature|session|sessionid|"
     r"state|code|authuser|access_token|id_token|nonce|key)=([^\s&\"'<>)]+)"
@@ -167,6 +168,7 @@ def sanitize_html(html: str) -> tuple[str, list[str]]:
     out = html
     out = _sub(_EMAIL_RE, "[redacted-email]", "emails", out)
     out = _sub(_PHONE_RE, "[redacted-phone]", "phone numbers", out)
+    out = _sub(_DATE_RE, "[redacted-date]", "dates of birth", out)
     out = _sub(_TOKEN_PARAM_RE, r"\1=[redacted-param]", "URL/session parameters", out)
     out = _sub(_ACCOUNT_LABEL_RE, 'aria-label="[redacted-account-label]"', "account labels", out)
     out = _sub(_AVATAR_RE, "<!-- [redacted-avatar] -->", "avatar images", out)

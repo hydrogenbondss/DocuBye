@@ -12,6 +12,7 @@ from .guided import verify_removal
 from .models import SyntheticProfile
 from .planner import RuleBasedPlanner
 from .sources.google_guided import run_guided_submission
+from .sources.peopleconnect_guided import run_peopleconnect_submission
 from .sources.spokeo_guided import run_spokeo_submission
 from .store import TaskStore
 
@@ -117,6 +118,15 @@ def _submit_spokeo(args: argparse.Namespace) -> None:
         store.close()
 
 
+def _submit_peopleconnect(args: argparse.Namespace) -> None:
+    store = TaskStore(args.store)
+    try:
+        task = run_peopleconnect_submission(store, args.task_id, args.profile)
+        print(json.dumps(task.to_public_dict(), indent=2))
+    finally:
+        store.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run DocuBye's local synthetic removal demo")
     subparsers = parser.add_subparsers(dest="command")
@@ -207,9 +217,24 @@ def main() -> None:
     spokeo_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
     spokeo_parser.set_defaults(handler=_submit_spokeo)
 
+    peopleconnect_parser = subparsers.add_parser(
+        "submit-peopleconnect",
+        help="Guided PeopleConnect Suppression Center flow; you execute it in your browser",
+    )
+    peopleconnect_parser.add_argument("task_id")
+    peopleconnect_parser.add_argument(
+        "--profile", required=True,
+        help="Owner-approved PeopleConnect profile JSON (must live under gitignored captures/)",
+    )
+    peopleconnect_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    peopleconnect_parser.set_defaults(handler=_submit_peopleconnect)
+
     # Backwards-compatible default: `docubye --scenario normal` still runs the demo.
     argv = sys.argv[1:]
-    if not argv or argv[0] not in {"run", "recover", "resume", "submit-google", "submit-spokeo", "verify", "-h", "--help"}:
+    if not argv or argv[0] not in {
+        "run", "recover", "resume", "submit-google", "submit-spokeo", "submit-peopleconnect",
+        "verify", "-h", "--help",
+    }:
         argv = ["run", *argv]
     args = parser.parse_args(argv)
     if args.command == "resume" and not args.confirm_human_resolution:
