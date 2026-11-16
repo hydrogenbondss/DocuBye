@@ -1,33 +1,28 @@
 """Guided submission for the Google contact-removal flow.
 
-The agent prepares; the owner executes; the agent tracks the outcome honestly.
-No browser automation is involved anywhere: the owner walks the real wizard in
-their own everyday browser, and this module only builds the checklist, walks
-them through it in the terminal, and records what they confirm.
-
-Boundaries:
-- The submission packet (field label -> exact value) is displayed in the
-  terminal only. It is never written to disk, never logged, never stored.
-- Task events and store rows record statuses and redacted notes only.
-- SUBMITTED_BY_OWNER is recorded only after the typed gate ("I SUBMITTED")
-  and a single-use approval consumption, consistent with Milestone 1.
-- REMOVED is recorded only via the verify command with an evidence artifact.
+Google-specific profile, validation, and packet content on top of the shared
+guided core (docubye.guided). The owner executes the real wizard in their own
+browser; this module only structures the checklist and records what they
+confirm. See the core module for the standing boundaries.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-from uuid import uuid4
 
-from ..models import TaskRecord, TaskStatus
-from ..store import ApprovalState, TaskStore
-from .google_capture import sanitize_html
-
-SUBMITTED_CONFIRMATION = "I SUBMITTED"
+from ..guided import (
+    SUBMITTED_CONFIRMATION,
+    PacketSection,
+    packet_fingerprint,
+    require_gitignored_path,
+    run_guided_flow,
+    verify_removal as _verify_removal,
+)
+from ..models import TaskRecord
+from ..store import TaskStore
 
 _REASON_LABELS = {
     "personal": "Content contains your personal information",
@@ -69,25 +64,10 @@ class OwnerProfile:
     id_country: str = ""
 
 
-@dataclass(frozen=True, slots=True)
-class PacketSection:
-    title: str
-    entries: tuple[tuple[str, str], ...]
-    conditional: bool = False
-
-
-def _require_gitignored_path(path: Path, marker: tuple[str, ...], label: str) -> None:
-    parts = path.resolve().parts
-    for index in range(len(parts) - len(marker) + 1):
-        if parts[index : index + len(marker)] == marker:
-            return
-    raise ValueError(f"{label} must live under {'/'.join(marker)}/ (a gitignored path); got: {path}")
-
-
 def load_profile(profile_path: str | Path) -> OwnerProfile:
     """Load the owner-approved profile from a gitignored local file."""
     path = Path(profile_path)
-    _require_gitignored_path(path, ("captures",), "The profile file")
+    require_gitignored_path(path, ("captures",), "The profile file")
     data = json.loads(path.read_text(encoding="utf-8"))
 
     def text(key: str) -> str:
@@ -173,18 +153,6 @@ def build_packet(profile: OwnerProfile) -> tuple[PacketSection, ...]:
     return tuple(sections)
 
 
-def packet_fingerprint(packet: tuple[PacketSection, ...]) -> str:
-    canonical = json.dumps(
-        [(section.title, section.entries, section.conditional) for section in packet],
-        ensure_ascii=True, separators=(",", ":"),
-    )
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _redact(text: str) -> str:
-    return sanitize_html(text)[0]
-
-
 def run_guided_submission(
     store: TaskStore,
     task_id: str,
@@ -193,63 +161,13 @@ def run_guided_submission(
     prompt_fn: Callable[[str], str] = input,
     out: Callable[[str], None] = print,
 ) -> TaskRecord:
-    """Walk the owner through the packet, then record SUBMITTED_BY_OWNER.
-
-    The approval is recorded before the walkthrough (resumable if interrupted)
-    and consumed exactly once at the typed gate.
-    """
-    stored = store.load_task(task_id)
-    task = stored.task
-    if stored.approval_state is ApprovalState.CONSUMED:
-        raise PermissionError(
-            "This task's approval was already consumed. If the owner submitted, record the "
-            "outcome with `docubye verify`; otherwise the task needs a fresh review."
-        )
-    if task.status is not TaskStatus.READY_FOR_REVIEW:
-        raise ValueError(
-            f"Guided submission requires a ready_for_review task; this task is {task.status.value}. "
-            "Run the inspection first or resume from awaiting_user."
-        )
-
+    """Build the Google packet from the owner profile and run the guided flow."""
     profile = load_profile(profile_path)
     packet = build_packet(profile)
-    fingerprint = packet_fingerprint(packet)
-
-    if stored.approval_state is ApprovalState.NONE:
-        submission_key = str(uuid4())
-        store.record_approval(task_id, submission_key, fingerprint)
-    elif stored.payload_fingerprint != fingerprint:
-        raise PermissionError(
-            "An approval exists for a different packet. The profile changed after approval; "
-            "the task needs a fresh review."
-        )
-
-    out("\nGuided submission — you drive the browser; this tool only guides.")
-    out("Open the removal form in YOUR browser and walk each section as shown.")
-    for index, section in enumerate(packet, start=1):
-        marker = " (conditional section)" if section.conditional else ""
-        out(f"\nSection {index}/{len(packet)}: {section.title}{marker}")
-        for label, value in section.entries:
-            out(f"  {label}:\n    {value}")
-        answer = prompt_fn("Press Enter alone when this section is done: ")
-        while answer.strip():
-            answer = prompt_fn("No input expected — press Enter alone when done: ")
-
-    confirmation = prompt_fn(f"Only AFTER you clicked Submit yourself, type exactly: {SUBMITTED_CONFIRMATION}\n> ")
-    while confirmation.strip() != SUBMITTED_CONFIRMATION:
-        confirmation = prompt_fn(f"Not confirmed. Type exactly: {SUBMITTED_CONFIRMATION}\n> ")
-
-    store.consume_approval(task_id, store.load_task(task_id).submission_key)
-    task.transition(
-        TaskStatus.SUBMITTED_BY_OWNER,
-        "Owner confirmed their own submission via the typed gate; approval consumed once",
+    return run_guided_flow(
+        store, task_id, packet, source_name="Google Search contact-info removal",
+        prompt_fn=prompt_fn, out=out,
     )
-    store.save_task(task)
-    task.transition(TaskStatus.AWAITING_CONFIRMATION, "Awaiting Google's decision; not verified")
-    store.save_task(task)
-    out("\nRecorded: submitted_by_owner (the human clicked the button, not the agent).")
-    out("Next: when Google responds, run `docubye verify <task-id> --evidence <path> --confirm`.")
-    return task
 
 
 def verify_removal(
@@ -260,35 +178,7 @@ def verify_removal(
     confirm: bool,
     google_confirmation: str = "",
 ) -> TaskRecord:
-    """Record a verification artifact and transition the task to REMOVED.
-
-    The evidence file must live under captures/evidence/ (gitignored). Without
-    a recorded artifact the task can never be labelled removed.
-    """
-    if not confirm:
-        raise PermissionError("Verification requires the explicit --confirm flag")
-    stored = store.load_task(task_id)
-    task = stored.task
-    if task.status is not TaskStatus.AWAITING_CONFIRMATION:
-        raise ValueError(
-            f"Verification requires an awaiting_confirmation task; this task is {task.status.value}. "
-            "A task is never labelled removed from submission alone."
-        )
-
-    path = Path(evidence_path)
-    _require_gitignored_path(path, ("captures", "evidence"), "The evidence file")
-    if not path.is_file():
-        raise ValueError(f"Evidence file not found: {path}")
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-
-    note = "Google decision evidence recorded by owner"
-    if google_confirmation.strip():
-        note += f"; owner-provided confirmation (redacted): {_redact(google_confirmation.strip())[:160]}"
-    store.record_evidence(task_id, "verification", path.name, digest, note)
-
-    if not store.evidence_for(task_id):
-        raise RuntimeError("Evidence artifact was not recorded; refusing to mark removed")
-
-    task.transition(TaskStatus.REMOVED, "Removal verified by owner-provided evidence artifact")
-    store.save_task(task)
-    return task
+    """Evidence-gated verification for the Google flow (delegates to the core)."""
+    return _verify_removal(
+        store, task_id, evidence_path, confirm=confirm, confirmation_note=google_confirmation
+    )

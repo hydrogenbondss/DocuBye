@@ -8,9 +8,11 @@ import sys
 
 from .agent import MockRemovalAgent, ReviewSummary, recover_submission, resume_paused_task
 from .mock_site import running_mock_site
+from .guided import verify_removal
 from .models import SyntheticProfile
 from .planner import RuleBasedPlanner
-from .sources.google_guided import run_guided_submission, verify_removal
+from .sources.google_guided import run_guided_submission
+from .sources.spokeo_guided import run_spokeo_submission
 from .store import TaskStore
 
 SCENARIOS = ["normal", "challenge", "unexpected", "verified", "early-submit", "timeout-after-submit"]
@@ -99,8 +101,17 @@ def _verify(args: argparse.Namespace) -> None:
     try:
         task = verify_removal(
             store, args.task_id, args.evidence,
-            confirm=args.confirm, google_confirmation=args.google_confirmation,
+            confirm=args.confirm, confirmation_note=args.google_confirmation,
         )
+        print(json.dumps(task.to_public_dict(), indent=2))
+    finally:
+        store.close()
+
+
+def _submit_spokeo(args: argparse.Namespace) -> None:
+    store = TaskStore(args.store)
+    try:
+        task = run_spokeo_submission(store, args.task_id, args.profile)
         print(json.dumps(task.to_public_dict(), indent=2))
     finally:
         store.close()
@@ -184,9 +195,21 @@ def main() -> None:
     verify_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
     verify_parser.set_defaults(handler=_verify)
 
+    spokeo_parser = subparsers.add_parser(
+        "submit-spokeo",
+        help="Guided Spokeo opt-out: you execute each opt-out in your browser; the tool guides and records",
+    )
+    spokeo_parser.add_argument("task_id")
+    spokeo_parser.add_argument(
+        "--profile", required=True,
+        help="Owner-approved Spokeo profile JSON (must live under gitignored captures/)",
+    )
+    spokeo_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    spokeo_parser.set_defaults(handler=_submit_spokeo)
+
     # Backwards-compatible default: `docubye --scenario normal` still runs the demo.
     argv = sys.argv[1:]
-    if not argv or argv[0] not in {"run", "recover", "resume", "submit-google", "verify", "-h", "--help"}:
+    if not argv or argv[0] not in {"run", "recover", "resume", "submit-google", "submit-spokeo", "verify", "-h", "--help"}:
         argv = ["run", *argv]
     args = parser.parse_args(argv)
     if args.command == "resume" and not args.confirm_human_resolution:

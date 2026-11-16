@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic example for tests and docs. Real profiles live in gitignored captures/profile.local.json — never commit real values.",
+  "contact_email": "alex.example@example.test",
+  "listing_urls": [
+    "https://www.spokeo.com/Example-Person/California-Synthetic",
+    "https://www.spokeo.com/Example-Person/New-York-Synthetic"
+  ],
+  "first_name": "Alex",
+  "last_name": "Example",
+  "city": "Springfield",
+  "state": "CA"
+}
