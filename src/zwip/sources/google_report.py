@@ -1,7 +1,7 @@
 """Manual-capture report tool for the Google contact-removal flow.
 
 The automated live-capture path is abandoned: Google stonewalls
-automation-controlled browsers at sign-in, and DocuBye's no-evasion
+automation-controlled browsers at sign-in, and Zwip's no-evasion
 principles mean we will not fight that. Instead the OWNER does everything in
 their own everyday browser — sign in, open the removal form, walk its steps
 manually, and save each step as "Webpage, HTML Only" into a local folder,

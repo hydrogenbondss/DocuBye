@@ -1,7 +1,7 @@
 """Guided submission for the Google contact-removal flow.
 
 Google-specific profile, validation, and packet content on top of the shared
-guided core (docubye.guided). The owner executes the real wizard in their own
+guided core (zwip.guided). The owner executes the real wizard in their own
 browser; this module only structures the checklist and records what they
 confirm. See the core module for the standing boundaries.
 """

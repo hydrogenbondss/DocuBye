@@ -1,8 +1,8 @@
-from docubye.planner import RuleBasedPlanner
+from zwip.planner import RuleBasedPlanner
 
 
 def fixture_fields():
-    from docubye.planner import FormField
+    from zwip.planner import FormField
 
     return [
         FormField("full_name", "Full name", "text", True),
@@ -22,7 +22,7 @@ def test_rule_based_planner_maps_known_fields():
 
 
 def test_rule_based_planner_pauses_for_unknown_required_field():
-    from docubye.planner import FormField
+    from zwip.planner import FormField
 
     fields = fixture_fields() + [FormField("government_id", "Government ID", "text", True)]
     result = RuleBasedPlanner().map_fields(fields)

@@ -2,16 +2,16 @@ import json
 
 import pytest
 
-from docubye.guided import SUBMITTED_CONFIRMATION, verify_removal
-from docubye.models import TaskRecord, TaskStatus
-from docubye.sources.whitepages_guided import (
+from zwip.guided import SUBMITTED_CONFIRMATION, verify_removal
+from zwip.models import TaskRecord, TaskStatus
+from zwip.sources.whitepages_guided import (
     FALLBACK_EMAIL,
     SUPPRESSION_URL,
     build_packet,
     load_profile,
     run_whitepages_submission,
 )
-from docubye.store import ApprovalState, TaskStore
+from zwip.store import ApprovalState, TaskStore
 
 EXAMPLE_PROFILE = "tests/fixtures/whitepages/owner_profile.example.json"
 PHONE = "+1 202 555 0147"

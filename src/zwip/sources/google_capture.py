@@ -7,7 +7,7 @@ sanitized (names, emails, phone numbers, avatars, tokens, session identifiers)
 and the redaction diff is shown before anything is written to disk. The output
 directory is gitignored by default.
 
-Requires DOCUBYE_REAL_SOURCE=1 and an explicit typed account confirmation.
+Requires ZWIP_REAL_SOURCE=1 and an explicit typed account confirmation.
 """
 
 from __future__ import annotations
@@ -323,8 +323,8 @@ def run_capture(
 
     ``live=True`` (the default) launches the owner's real Chrome against the
     live site and is DEPRECATED: Google stonewalls automation-controlled
-    browsers at sign-in and DocuBye does not evade that. The supported
-    validation path is manual capture (docubye-google-report). Tests pass
+    browsers at sign-in and Zwip does not evade that. The supported
+    validation path is manual capture (zwip-google-report). Tests pass
     ``live=False`` with a fixture ``start_url`` to run the same flow offline
     with the Playwright-managed Chromium.
     """

@@ -2,7 +2,7 @@
 
 No browser automation against whitepages.com and zero network calls: the owner
 works in their own browser and answers the automated verification call on their
-own phone. DocuBye never solves CAPTCHAs and never enters the 4-digit code —
+own phone. Zwip never solves CAPTCHAs and never enters the 4-digit code —
 it structures the work as a checklist and records only statuses and redacted
 notes.
 

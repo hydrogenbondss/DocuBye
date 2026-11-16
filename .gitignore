@@ -8,8 +8,8 @@ __pycache__/
 playwright-report/
 test-results/
 *.sqlite3
-docubye-fixture-state.json
+zwip-fixture-state.json
 # Live captures are sanitized but never committed.
 captures/
-src/docubye.egg-info/
+src/zwip.egg-info/
 *.egg-info/

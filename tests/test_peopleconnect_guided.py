@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from docubye.guided import SUBMITTED_CONFIRMATION, verify_removal
-from docubye.models import TaskRecord, TaskStatus
-from docubye.sources.peopleconnect_guided import (
+from zwip.guided import SUBMITTED_CONFIRMATION, verify_removal
+from zwip.models import TaskRecord, TaskStatus
+from zwip.sources.peopleconnect_guided import (
     FALLBACK_EMAIL,
     FALLBACK_PHONE,
     LOGIN_URL,
@@ -12,7 +12,7 @@ from docubye.sources.peopleconnect_guided import (
     load_profile,
     run_peopleconnect_submission,
 )
-from docubye.store import ApprovalState, TaskStore
+from zwip.store import ApprovalState, TaskStore
 
 EXAMPLE_PROFILE = "tests/fixtures/peopleconnect/owner_profile.example.json"
 DOB = "1990-01-01"

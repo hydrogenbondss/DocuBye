@@ -6,14 +6,14 @@
 ## Workflow
 
 1. **Discovery (owner, manual):** search whitepages.com for your name and city/state variants in your own browser; copy each matching profile URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/whitepages/owner_profile.example.json`). Never commit a real profile.
-2. **Submit** — `docubye submit-whitepages <task-id> --profile <path>` validates the profile (https listing URLs on whitepages.com/www.whitepages.com only; a phone number that can receive a live call is required — the standard flow cannot complete without one), then walks the packet:
+2. **Submit** — `zwip submit-whitepages <task-id> --profile <path>` validates the profile (https listing URLs on whitepages.com/www.whitepages.com only; a phone number that can receive a live call is required — the standard flow cannot complete without one), then walks the packet:
    - *Find your listings* — search guidance (URLs come from the validated profile).
    - *Before you start* — the flow places a **live automated call** with a 4-digit code; have your phone next to you and finish one listing at a time. A secondary number (e.g. Google Voice) works if you prefer not to share your primary one.
    - *Opt out of each listing* — per listing URL: https://www.whitepages.com/suppression-requests → paste URL → "Remove Me" → pick a reason → enter the phone number → answer the call → enter the 4-digit code yourself.
    - *Confirm* — removals process within ~1–72 hours; re-check each listing URL after 72 hours.
    - *Keep in mind* — re-listing is common (re-check quarterly); if the form rejects your number or cites too many requests, use the manual route: privacyrequest@whitepages.com with your listing URLs, or their privacy webform.
 3. The packet (including the phone number) is displayed in the terminal only — never written to disk, logged, or stored. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once; a changed profile after approval requires a fresh review.
-4. **Verify** — `docubye verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
+4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
 
 ## Required data
 

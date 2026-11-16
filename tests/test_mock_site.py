@@ -3,7 +3,7 @@ from urllib.request import Request, urlopen
 
 import pytest
 
-from docubye.mock_site import running_mock_site
+from zwip.mock_site import running_mock_site
 
 
 def test_mock_site_serves_form_without_real_profile_values():

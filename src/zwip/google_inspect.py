@@ -37,7 +37,7 @@ EXPECTED_CONTACT_STEPS = [
 ]
 
 HUMAN_HANDOFF_PROMPT = """\
-DocuBye is paused for a human, read-only inspection.
+Zwip is paused for a human, read-only inspection.
 
 Use only the browser window opened by this command. You may inspect the public
 wizard and select navigation choices, but do NOT sign in, enter or paste any
@@ -51,7 +51,7 @@ that restriction or switch to an authenticated browser profile.
 
 Navigate only as far as the address/phone/email branch, stopping before any
 personal-data fields. Press Enter here when you are done observing, or use
-Ctrl+C to stop. DocuBye will record visible labels and field metadata only;
+Ctrl+C to stop. Zwip will record visible labels and field metadata only;
 it will not read input values, cookies, request bodies, or screenshots.
 
 Press Enter to capture the current visible metadata: """
@@ -306,7 +306,7 @@ def _perform_human_handoff(
     elif challenge_after:
         report.notes.append(
             "A CAPTCHA/human-verification element remains visible. The read-only handoff stopped here; "
-            "DocuBye did not bypass it."
+            "Zwip did not bypass it."
         )
     else:
         report.notes.append(
@@ -370,7 +370,7 @@ def inspect_google_contact_form(
         socket_route.on_message(lambda _message: None)
 
     with sync_playwright() as playwright:
-        executable_path = os.getenv("DOCUBYE_CHROMIUM_EXECUTABLE") or None
+        executable_path = os.getenv("ZWIP_CHROMIUM_EXECUTABLE") or None
         browser = playwright.chromium.launch(headless=headless, executable_path=executable_path)
         context = browser.new_context(service_workers="block", accept_downloads=False)
         context.route("**/*", guard)

@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from docubye.google_inspect import EXPECTED_CONTACT_STEPS
-from docubye.sources.google import FORM_PATH, serve_google_fixtures
-from docubye.sources.google_capture import (
+from zwip.google_inspect import EXPECTED_CONTACT_STEPS
+from zwip.sources.google import FORM_PATH, serve_google_fixtures
+from zwip.sources.google_capture import (
     ACCOUNT_CONFIRMATION,
     redaction_diff,
     run_capture,
@@ -117,13 +117,13 @@ def test_wizard_phase_policy_relocks_to_read_only():
 
 
 def test_capture_refuses_without_env_opt_in():
-    with pytest.raises(RuntimeError, match="DOCUBYE_REAL_SOURCE"):
+    with pytest.raises(RuntimeError, match="ZWIP_REAL_SOURCE"):
         run_capture(env={}, prompt_fn=lambda _message: "")
 
 
 def test_capture_refuses_without_typed_account_confirmation():
     with pytest.raises(PermissionError, match="account confirmation"):
-        run_capture(env={"DOCUBYE_REAL_SOURCE": "1"}, prompt_fn=lambda _message: "yes sure")
+        run_capture(env={"ZWIP_REAL_SOURCE": "1"}, prompt_fn=lambda _message: "yes sure")
 
 
 def _scripted_prompts(answers, calls):
@@ -141,7 +141,7 @@ def _offline_capture(base, tmp_path, answers, calls, **overrides):
         "output_dir": tmp_path / "captures",
         "start_url": f"{base}{FORM_PATH}?hl=en",
         "prompt_fn": _scripted_prompts(answers, calls),
-        "env": {"DOCUBYE_REAL_SOURCE": "1"},
+        "env": {"ZWIP_REAL_SOURCE": "1"},
         "headless": True,
         "live": False,
         "auth_host": "127.0.0.1",
@@ -277,7 +277,7 @@ def test_wizard_not_loaded_pauses_with_redacted_note(chromium, tmp_path):
             output_dir=tmp_path / "captures",
             start_url=f"{base}{FORM_PATH}?hl=en",
             prompt_fn=_scripted_prompts([ACCOUNT_CONFIRMATION, ""], calls),
-            env={"DOCUBYE_REAL_SOURCE": "1"},
+            env={"ZWIP_REAL_SOURCE": "1"},
             headless=True,
             live=False,
             auth_host="127.0.0.1",
@@ -325,7 +325,7 @@ def test_live_path_uses_real_chrome_persistent_context(monkeypatch, tmp_path):
     # The harness wraps launcher errors; the recorded arguments prove the policy.
     with pytest.raises(RuntimeError, match="Google Chrome is not installed") as excinfo:
         run_capture(
-            env={"DOCUBYE_REAL_SOURCE": "1"},
+            env={"ZWIP_REAL_SOURCE": "1"},
             prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
             output_dir=tmp_path / "captures" / "google",
         )
@@ -345,7 +345,7 @@ def test_live_path_reports_missing_chrome_clearly(monkeypatch, tmp_path):
     _fake_playwright_session(monkeypatch, launch_persistent_context=fake_lpc)
     with pytest.raises(RuntimeError, match="Google Chrome is not installed"):
         run_capture(
-            env={"DOCUBYE_REAL_SOURCE": "1"},
+            env={"ZWIP_REAL_SOURCE": "1"},
             prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
             output_dir=tmp_path / "captures",
         )
@@ -367,7 +367,7 @@ def test_fixture_path_keeps_playwright_chromium(monkeypatch, tmp_path):
     )
     with pytest.raises(_StopCapture):
         run_capture(
-            env={"DOCUBYE_REAL_SOURCE": "1"},
+            env={"ZWIP_REAL_SOURCE": "1"},
             prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
             output_dir=tmp_path / "captures",
             start_url="http://127.0.0.1:9/websearch/contact/content_removal_form?hl=en",
@@ -382,7 +382,7 @@ def test_live_path_refuses_headless(monkeypatch, tmp_path):
     _fake_playwright_session(monkeypatch)
     with pytest.raises(ValueError, match="headed browser"):
         run_capture(
-            env={"DOCUBYE_REAL_SOURCE": "1"},
+            env={"ZWIP_REAL_SOURCE": "1"},
             prompt_fn=lambda _message: ACCOUNT_CONFIRMATION,
             output_dir=tmp_path / "captures",
             headless=True,  # start_url defaults to the live URL

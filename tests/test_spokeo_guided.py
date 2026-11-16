@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from docubye.models import TaskRecord, TaskStatus
-from docubye.sources.spokeo_guided import (
+from zwip.models import TaskRecord, TaskStatus
+from zwip.sources.spokeo_guided import (
     OPT_OUT_URL,
     build_packet,
     load_profile,
     run_spokeo_submission,
 )
-from docubye.guided import SUBMITTED_CONFIRMATION, verify_removal
-from docubye.store import ApprovalState, TaskStore
+from zwip.guided import SUBMITTED_CONFIRMATION, verify_removal
+from zwip.store import ApprovalState, TaskStore
 
 EXAMPLE_PROFILE = "tests/fixtures/spokeo/owner_profile.example.json"
 

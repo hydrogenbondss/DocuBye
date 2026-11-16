@@ -1,10 +1,12 @@
-# DocuBye
+# Zwip
 
-[![tests](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml/badge.svg)](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml)
+**Formerly DocuBye.**
+
+[![tests](https://github.com/hydrogenbondss/Zwip/actions/workflows/tests.yml/badge.svg)](https://github.com/hydrogenbondss/Zwip/actions/workflows/tests.yml)
 
 **An open-source AI agent for removing your own digital footprint.**
 
-DocuBye aims to do more than list privacy risks or generate opt-out instructions. It is being designed to carry out authorised removal workflows in a real browser, handle routine steps automatically, ask for help when a site requires human judgement, and keep an honest record of what happened.
+Zwip aims to do more than list privacy risks or generate opt-out instructions. It is being designed to carry out authorised removal workflows in a real browser, handle routine steps automatically, ask for help when a site requires human judgement, and keep an honest record of what happened.
 
 > **Project status: early prototype.** The current runnable workflow uses a local synthetic site only. It does not connect to real data brokers and does not submit real removal requests.
 
@@ -32,14 +34,14 @@ Requires Python 3.11+ and Chromium supported by Playwright.
 
 Run the local demo:
 
-    docubye run --scenario normal
+    zwip run --scenario normal
 
 The CLI displays the destination and data categories, then asks you to explicitly approve the synthetic submission. Try the safe-pause scenarios:
 
-    docubye run --scenario challenge
-    docubye run --scenario unexpected
-    docubye run --scenario early-submit
-    docubye run --scenario verified
+    zwip run --scenario challenge
+    zwip run --scenario unexpected
+    zwip run --scenario early-submit
+    zwip run --scenario verified
 
 The early-submit scenario intentionally attempts a POST before approval. The browser request guard should block it. The verified scenario is a simulated fixture response, not evidence about a real website.
 
@@ -47,11 +49,11 @@ The early-submit scenario intentionally attempts a POST before approval. The bro
 
 The timeout-after-submit scenario records the POST but withholds the acknowledgement marker, so the run ends in the UNKNOWN state:
 
-    docubye run --scenario timeout-after-submit
+    zwip run --scenario timeout-after-submit
 
 The CLI prints a recovery command with the task ID. Run it to perform a read-only status lookup by the persisted idempotency key:
 
-    docubye recover <task-id>
+    zwip recover <task-id>
 
 Recovery finds the original submission, records its confirmation ID, and moves the task to awaiting_confirmation without sending a second request. Nothing ever resubmits automatically.
 
@@ -59,7 +61,7 @@ Recovery finds the original submission, records its confirmation ID, and moves t
 
 When the workflow pauses (awaiting_user), for example at a simulated verification challenge, a person must resolve the blocking step first. Resuming then continues the same task under the same task ID:
 
-    docubye resume <task-id> --note "Operator cleared the simulated check" --confirm-human-resolution
+    zwip resume <task-id> --note "Operator cleared the simulated check" --confirm-human-resolution
 
 The note is redacted and recorded in the task history. The resumed task is re-inspected and freshly reviewed; it can never resume into submission, and rejection is terminal — a rejected task requires a fresh task.
 ## First real-source candidate (research only)
@@ -68,13 +70,13 @@ The Google Search personal contact-info workflow is being investigated, not auto
 
 The default command uses a fresh, unauthenticated browser context:
 
-    docubye-inspect-google-form
+    zwip-inspect-google-form
 
 It prints visible field labels and non-sensitive attributes. It does not fill the form or submit a request. It blocks every non-GET/HEAD request, unapproved hosts, and WebSockets. If a CAPTCHA or human-verification element is visible, automatic mode stops before selecting any branch.
 
 For a person to inspect the live wizard, run the explicit headed handoff:
 
-    docubye-inspect-google-form --headed --human-handoff
+    zwip-inspect-google-form --headed --human-handoff
 
 The browser remains visible while the terminal waits. A person may inspect the public wizard and select navigation choices, then press Enter to capture visible labels and field metadata. **The human handoff does not relax the network guard.** Only HTTPS GET/HEAD requests to the small Google-host allowlist are permitted. Every POST/PUT/PATCH/DELETE request, unapproved host, WebSocket, and known submission endpoint remains blocked. This may prevent a CAPTCHA or Next button from working. Do not sign in, enter personal information, upload files, click Submit, use an authenticated browser profile, or try to bypass a blocked request. If the branch cannot be reached under these restrictions, stop and record that it remains unverified.
 
@@ -86,13 +88,13 @@ A manual inspection in the user's regular browser on 31 October 2026 confirmed t
 
 **Read-only inspection implemented; submission intentionally not yet implemented.** The adapter navigates the documented flow, pauses at sign-in walls and CAPTCHAs, collects field metadata, and produces a dry-run plan — then stops. No code path fills a field, clicks Submit, or sends a request body.
 
-    docubye-google-dry-run                      # offline fixtures (default, CI-safe)
-    docubye-google-dry-run --scenario captcha   # pause-path scenarios
-    DOCUBYE_REAL_SOURCE=1 docubye-google-dry-run --live   # explicit opt-in, read-only
+    zwip-google-dry-run                      # offline fixtures (default, CI-safe)
+    zwip-google-dry-run --scenario captcha   # pause-path scenarios
+    ZWIP_REAL_SOURCE=1 zwip-google-dry-run --live   # explicit opt-in, read-only
 
 Details, failure states, and boundaries: docs/integrations/google.md.
 
-Live validation of the read path is **manual**: you walk the wizard in your own browser, save each step as HTML, and `docubye-google-report --html-dir <folder>` validates selectors offline (sanitized, opt-in copies, JSON report with no page content). See docs/integrations/google.md.
+Live validation of the read path is **manual**: you walk the wizard in your own browser, save each step as HTML, and `zwip-google-report --html-dir <folder>` validates selectors offline (sanitized, opt-in copies, JSON report with no page content). See docs/integrations/google.md.
 
 ## Principles
 

