@@ -58,7 +58,7 @@ _ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
 
 
 def _fixture_defaults() -> dict[str, str]:
-    fixture = resources.files("docubye.fixtures").joinpath("synthetic_profile.json")
+    fixture = resources.files("zwip.fixtures").joinpath("synthetic_profile.json")
     data = json.loads(fixture.read_text(encoding="utf-8"))
     return {key: str(data[key]) for key in ("full_name", "email", "phone")}
 

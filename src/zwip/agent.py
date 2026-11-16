@@ -123,7 +123,7 @@ class MockRemovalAgent:
             if count_submission:
                 blocked_submission_count += 1
             blocked_requests.append(detail[:160])
-            route.fulfill(status=403, body="Blocked by DocuBye local test guard")
+            route.fulfill(status=403, body="Blocked by Zwip local test guard")
 
         def guard(route) -> None:
             nonlocal blocked_submission_count, submission_approved
@@ -184,7 +184,7 @@ class MockRemovalAgent:
             websocket_route.on_message(lambda _message: None)
 
         with sync_playwright() as playwright:
-            executable_path = os.getenv("DOCUBYE_CHROMIUM_EXECUTABLE") or None
+            executable_path = os.getenv("ZWIP_CHROMIUM_EXECUTABLE") or None
             browser = playwright.chromium.launch(headless=self.headless, executable_path=executable_path)
             context = browser.new_context(service_workers="block")
             context.route("**/*", guard)

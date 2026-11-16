@@ -1,4 +1,4 @@
-"""Command-line demo for DocuBye's synthetic workflow."""
+"""Command-line demo for Zwip's synthetic workflow."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _run(args: argparse.Namespace) -> None:
     store = TaskStore(args.store)
     try:
         with running_mock_site(args.scenario, state_path=args.fixture_state) as (base_url, state):
-            print(f"DocuBye mock site: {base_url}")
+            print(f"Zwip mock site: {base_url}")
             print(f"Task store: {args.store}")
             print("Local synthetic data only. No real removal site will be contacted.")
             result = MockRemovalAgent(planner=RuleBasedPlanner(), headless=not args.headed).run(
@@ -49,7 +49,7 @@ def _run(args: argparse.Namespace) -> None:
                 print("Blocked external hosts: " + ", ".join(sorted(set(result.blocked_hosts))))
             print(f"Pre-approval submissions blocked: {result.blocked_submission_attempts}")
             if result.task.status.value == "unknown":
-                print(f"Recover with: docubye recover {result.task.task_id} --store {args.store}")
+                print(f"Recover with: zwip recover {result.task.task_id} --store {args.store}")
     finally:
         store.close()
 
@@ -74,7 +74,7 @@ def _resume(args: argparse.Namespace) -> None:
         )
         print(f"Task {stored.task.task_id} resumed; continuing with fresh inspection and review.")
         with running_mock_site(args.scenario, state_path=args.fixture_state) as (base_url, state):
-            print(f"DocuBye mock site: {base_url}")
+            print(f"Zwip mock site: {base_url}")
             result = MockRemovalAgent(planner=RuleBasedPlanner(), headless=not args.headed).run(
                 base_url=base_url,
                 profile=SyntheticProfile(),
@@ -138,15 +138,15 @@ def _submit_whitepages(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run DocuBye's local synthetic removal demo")
+    parser = argparse.ArgumentParser(description="Run Zwip's local synthetic removal demo")
     subparsers = parser.add_subparsers(dest="command")
 
     run_parser = subparsers.add_parser("run", help="Run the synthetic removal workflow")
     run_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
-    run_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    run_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     run_parser.add_argument(
-        "--fixture-state", default="docubye-fixture-state.json",
-        help="Mock-site state file, so `docubye recover` can find submissions from earlier runs",
+        "--fixture-state", default="zwip-fixture-state.json",
+        help="Mock-site state file, so `zwip recover` can find submissions from earlier runs",
     )
     run_parser.add_argument("--headed", action="store_true", help="Show the local browser window")
     run_parser.set_defaults(handler=_run)
@@ -156,10 +156,10 @@ def main() -> None:
         help="Resolve an UNKNOWN task by looking up its original submission (read-only, never resubmits)",
     )
     recover_parser.add_argument("task_id")
-    recover_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    recover_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     recover_parser.add_argument(
-        "--fixture-state", default="docubye-fixture-state.json",
-        help="Mock-site state file written by the original `docubye run`",
+        "--fixture-state", default="zwip-fixture-state.json",
+        help="Mock-site state file written by the original `zwip run`",
     )
     recover_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
     recover_parser.set_defaults(handler=_recover)
@@ -169,7 +169,7 @@ def main() -> None:
         help="Resume a paused (awaiting_user) task after a person resolved the blocking step",
     )
     resume_parser.add_argument("task_id")
-    resume_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    resume_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     resume_parser.add_argument(
         "--note", required=True,
         help="Redacted human-resolution note recorded in the task history (no personal values)",
@@ -180,8 +180,8 @@ def main() -> None:
     )
     resume_parser.add_argument("--scenario", choices=SCENARIOS, default="normal")
     resume_parser.add_argument(
-        "--fixture-state", default="docubye-fixture-state.json",
-        help="Mock-site state file written by the original `docubye run`",
+        "--fixture-state", default="zwip-fixture-state.json",
+        help="Mock-site state file written by the original `zwip run`",
     )
     resume_parser.add_argument("--headed", action="store_true", help="Show the local browser window")
     resume_parser.set_defaults(handler=_resume)
@@ -195,7 +195,7 @@ def main() -> None:
         "--profile", required=True,
         help="Owner-approved profile JSON (must live under gitignored captures/)",
     )
-    submit_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    submit_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     submit_parser.set_defaults(handler=_submit_google)
 
     verify_parser = subparsers.add_parser(
@@ -212,7 +212,7 @@ def main() -> None:
         "--google-confirmation", default="",
         help="Optional Google-side confirmation text (recorded redacted)",
     )
-    verify_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    verify_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     verify_parser.set_defaults(handler=_verify)
 
     spokeo_parser = subparsers.add_parser(
@@ -224,7 +224,7 @@ def main() -> None:
         "--profile", required=True,
         help="Owner-approved Spokeo profile JSON (must live under gitignored captures/)",
     )
-    spokeo_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    spokeo_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     spokeo_parser.set_defaults(handler=_submit_spokeo)
 
     peopleconnect_parser = subparsers.add_parser(
@@ -236,7 +236,7 @@ def main() -> None:
         "--profile", required=True,
         help="Owner-approved PeopleConnect profile JSON (must live under gitignored captures/)",
     )
-    peopleconnect_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    peopleconnect_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     peopleconnect_parser.set_defaults(handler=_submit_peopleconnect)
 
     whitepages_parser = subparsers.add_parser(
@@ -248,10 +248,10 @@ def main() -> None:
         "--profile", required=True,
         help="Owner-approved Whitepages profile JSON (must live under gitignored captures/)",
     )
-    whitepages_parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    whitepages_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     whitepages_parser.set_defaults(handler=_submit_whitepages)
 
-    # Backwards-compatible default: `docubye --scenario normal` still runs the demo.
+    # Backwards-compatible default: `zwip --scenario normal` still runs the demo.
     argv = sys.argv[1:]
     if not argv or argv[0] not in {
         "run", "recover", "resume", "submit-google", "submit-spokeo", "submit-peopleconnect",

@@ -6,13 +6,13 @@
 ## Workflow
 
 1. **Discovery (owner, manual):** search spokeo.com for your name variants (and city/state) in your own browser; copy each matching listing URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/spokeo/owner_profile.example.json`). Never commit a real profile.
-2. **Submit** — `docubye submit-spokeo <task-id> --profile <path>` validates the profile (every listing URL must be an `https://` URL on `spokeo.com` or `www.spokeo.com`; an empty listing list is rejected with instructions to run discovery first), then walks you through the packet in the terminal:
+2. **Submit** — `zwip submit-spokeo <task-id> --profile <path>` validates the profile (every listing URL must be an `https://` URL on `spokeo.com` or `www.spokeo.com`; an empty listing list is rejected with instructions to run discovery first), then walks you through the packet in the terminal:
    - *Find your listings* — search guidance using your name/city/state variants (the actionable URLs come from the validated profile).
    - *Opt out of each listing* — for each listing URL, in order: go to https://www.spokeo.com/optout, paste the listing URL, enter your contact email, solve the CAPTCHA yourself, submit.
    - *Confirm by email* — Spokeo emails a verification link per request; the request is **not processed until you click that link**. Check spam/junk.
    - Closing note: listings can reappear as new data is ingested; re-check quarterly.
 3. The packet is displayed in the terminal only — never written to disk, logged, or stored. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once, and a changed profile after approval requires a fresh review.
-4. **Verify** — `docubye verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
+4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
 
 ## Required data
 

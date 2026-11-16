@@ -1,7 +1,7 @@
 import pytest
 
-from docubye.models import TaskRecord, TaskStatus
-from docubye.store import ApprovalState, TaskStore
+from zwip.models import TaskRecord, TaskStatus
+from zwip.store import ApprovalState, TaskStore
 
 
 def _ready_task():

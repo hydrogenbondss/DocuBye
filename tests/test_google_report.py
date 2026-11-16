@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from docubye.google_inspect import EXPECTED_CONTACT_STEPS
-from docubye.sources.google_report import build_html_report
+from zwip.google_inspect import EXPECTED_CONTACT_STEPS
+from zwip.sources.google_report import build_html_report
 
 pytest.importorskip("playwright")
 

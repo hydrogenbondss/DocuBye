@@ -1,6 +1,6 @@
 import pytest
 
-from docubye.google_inspect import (
+from zwip.google_inspect import (
     EXPECTED_CONTACT_STEPS,
     InspectionReport,
     _perform_human_handoff,
@@ -51,7 +51,7 @@ def test_report_urls_drop_query_strings_and_fragments():
 def test_inspector_selects_only_visible_exact_labels_and_never_reads_values(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _click_unique_visible_text, _visible_field_metadata
+    from zwip.google_inspect import _click_unique_visible_text, _visible_field_metadata
 
     html = """<!doctype html>
     <html><body>
@@ -93,7 +93,7 @@ def test_inspector_selects_only_visible_exact_labels_and_never_reads_values(chro
 def test_inspector_refuses_ambiguous_visible_label(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _click_unique_visible_text
+    from zwip.google_inspect import _click_unique_visible_text
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -106,7 +106,7 @@ def test_inspector_refuses_ambiguous_visible_label(chromium):
 def test_inspector_stops_before_branch_selection_when_captcha_is_visible(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _safe_to_inspect_without_handoff
+    from zwip.google_inspect import _safe_to_inspect_without_handoff
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -123,7 +123,7 @@ def test_inspector_stops_before_branch_selection_when_captcha_is_visible(chromiu
 def test_inspector_does_not_treat_hidden_captcha_as_visible_challenge(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _verification_challenge_visible
+    from zwip.google_inspect import _verification_challenge_visible
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -216,7 +216,7 @@ def test_human_handoff_marks_only_a_previously_visible_challenge_as_resolved(chr
 
 
 def test_human_handoff_requires_visible_browser():
-    from docubye.google_inspect import inspect_google_contact_form
+    from zwip.google_inspect import inspect_google_contact_form
 
     with pytest.raises(ValueError, match="requires a visible browser"):
         inspect_google_contact_form(headless=True, human_handoff=True)
@@ -246,9 +246,9 @@ def test_human_handoff_reports_a_challenge_that_appears_during_observation(chrom
 
 def test_cli_requires_headed_mode_for_human_handoff(monkeypatch):
     import sys
-    from docubye.google_inspect import main
+    from zwip.google_inspect import main
 
-    monkeypatch.setattr(sys, "argv", ["docubye-inspect-google-form", "--human-handoff"])
+    monkeypatch.setattr(sys, "argv", ["zwip-inspect-google-form", "--human-handoff"])
     with pytest.raises(SystemExit) as error:
         main()
     assert error.value.code == 2
@@ -257,10 +257,10 @@ def test_cli_requires_headed_mode_for_human_handoff(monkeypatch):
 def test_cli_requires_an_interactive_terminal_for_human_handoff(monkeypatch):
     import sys
     from types import SimpleNamespace
-    from docubye.google_inspect import main
+    from zwip.google_inspect import main
 
     monkeypatch.setattr(
-        sys, "argv", ["docubye-inspect-google-form", "--headed", "--human-handoff"]
+        sys, "argv", ["zwip-inspect-google-form", "--headed", "--human-handoff"]
     )
     monkeypatch.setattr(sys, "stdin", SimpleNamespace(isatty=lambda: False))
     with pytest.raises(SystemExit) as error:
@@ -271,7 +271,7 @@ def test_cli_requires_an_interactive_terminal_for_human_handoff(monkeypatch):
 def test_popup_guard_closes_popups_but_never_the_main_page(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _install_popup_guard
+    from zwip.google_inspect import _install_popup_guard
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -291,7 +291,7 @@ def test_popup_guard_closes_popups_but_never_the_main_page(chromium):
 def test_resolve_working_page_adopts_a_single_guarded_survivor(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _resolve_working_page
+    from zwip.google_inspect import _resolve_working_page
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -307,7 +307,7 @@ def test_resolve_working_page_adopts_a_single_guarded_survivor(chromium):
 def test_resolve_working_page_returns_none_when_everything_is_closed(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _resolve_working_page
+    from zwip.google_inspect import _resolve_working_page
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -321,7 +321,7 @@ def test_resolve_working_page_returns_none_when_everything_is_closed(chromium):
 def test_handoff_records_a_note_instead_of_raising_when_the_window_closes(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _perform_human_handoff
+    from zwip.google_inspect import _perform_human_handoff
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -343,7 +343,7 @@ def test_handoff_records_a_note_instead_of_raising_when_the_window_closes(chromi
 def test_handoff_adopts_a_replacement_tab_without_target_closed_error(chromium):
     pytest.importorskip("playwright")
     from playwright.sync_api import sync_playwright
-    from docubye.google_inspect import _perform_human_handoff
+    from zwip.google_inspect import _perform_human_handoff
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)

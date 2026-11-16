@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from docubye.models import SyntheticProfile, TaskRecord, TaskStatus, payload_fingerprint_for_payload
+from zwip.models import SyntheticProfile, TaskRecord, TaskStatus, payload_fingerprint_for_payload
 
 
 def test_task_rejects_invalid_transition():
@@ -31,7 +31,7 @@ def test_synthetic_profile_loads_from_the_fixture_file():
     from importlib import resources
 
     fixture = json.loads(
-        resources.files("docubye.fixtures").joinpath("synthetic_profile.json").read_text(encoding="utf-8")
+        resources.files("zwip.fixtures").joinpath("synthetic_profile.json").read_text(encoding="utf-8")
     )
     profile = SyntheticProfile()
     assert profile.full_name == fixture["full_name"]

@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from docubye.models import TaskRecord, TaskStatus
-from docubye.sources.google_guided import (
+from zwip.models import TaskRecord, TaskStatus
+from zwip.sources.google_guided import (
     SUBMITTED_CONFIRMATION,
     build_packet,
     load_profile,
@@ -11,7 +11,7 @@ from docubye.sources.google_guided import (
     run_guided_submission,
     verify_removal,
 )
-from docubye.store import ApprovalState, TaskStore
+from zwip.store import ApprovalState, TaskStore
 
 EXAMPLE_PROFILE = "tests/fixtures/google/owner_profile.example.json"
 

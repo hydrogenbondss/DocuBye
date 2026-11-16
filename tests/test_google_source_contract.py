@@ -1,6 +1,6 @@
 import pytest
 
-from docubye.sources.google_search_contact import (
+from zwip.sources.google_search_contact import (
     ContactInfoType,
     GoogleContactRemovalDraft,
     approve_google_review,

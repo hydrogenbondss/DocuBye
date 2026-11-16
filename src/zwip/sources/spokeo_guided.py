@@ -2,7 +2,7 @@
 
 No browser automation against spokeo.com and zero network calls: the owner
 searches for their own listings, opts out of each one themselves (solving any
-CAPTCHA personally — DocuBye never solves CAPTCHAs), and confirms the emailed
+CAPTCHA personally — Zwip never solves CAPTCHAs), and confirms the emailed
 verification link. This module structures that work as a checklist and records
 only statuses and redacted notes.
 

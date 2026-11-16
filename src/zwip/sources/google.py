@@ -7,7 +7,7 @@ here fills a field, clicks a submit control, or sends a request body. Every
 POST/PUT/PATCH/DELETE is blocked by the route guard and recorded redacted
 (method, host, path only).
 
-Live navigation requires the explicit DOCUBYE_REAL_SOURCE=1 opt-in. Without a
+Live navigation requires the explicit ZWIP_REAL_SOURCE=1 opt-in. Without a
 fixture directory the adapter refuses to touch the network. Tests and CI run
 against the sanitized snapshots in tests/fixtures/google/.
 """
@@ -38,7 +38,7 @@ from ..store import TaskStore
 
 FORM_PATH = "/websearch/contact/content_removal_form"
 LIVE_FORM_URL = f"https://support.google.com{FORM_PATH}?hl=en"
-REAL_SOURCE_ENV = "DOCUBYE_REAL_SOURCE"
+REAL_SOURCE_ENV = "ZWIP_REAL_SOURCE"
 
 FIXTURE_SCENARIOS = {
     "happy", "login-wall", "captcha", "unexpected", "mutated-action", "post-attack", "injection",
@@ -161,7 +161,7 @@ def inspect_google_dry_run(
     """Inspect the documented Google flow and produce a dry-run plan.
 
     Fixture mode (default) serves sanitized snapshots locally. Pass
-    fixture_dir=None for the live site, which requires DOCUBYE_REAL_SOURCE=1.
+    fixture_dir=None for the live site, which requires ZWIP_REAL_SOURCE=1.
     """
     live = fixture_dir is None
     if live and os.getenv(REAL_SOURCE_ENV) != "1":
@@ -225,7 +225,7 @@ def inspect_google_dry_run(
 
         outcome: InspectionOutcome | None = None
         with sync_playwright() as playwright:
-            executable_path = os.getenv("DOCUBYE_CHROMIUM_EXECUTABLE") or None
+            executable_path = os.getenv("ZWIP_CHROMIUM_EXECUTABLE") or None
             browser = playwright.chromium.launch(headless=headless, executable_path=executable_path)
             context = browser.new_context(service_workers="block", accept_downloads=False)
             context.route("**/*", guard)
@@ -247,13 +247,13 @@ def inspect_google_dry_run(
                     outcome = _pause(
                         task,
                         "Sign-in wall encountered; no credentials were entered",
-                        "The flow requires sign-in. DocuBye does not automate logins; resolve manually.",
+                        "The flow requires sign-in. Zwip does not automate logins; resolve manually.",
                     )
                 if outcome is None and _verification_challenge_visible(page):
                     outcome = _pause(
                         task,
                         "Human verification challenge visible",
-                        "A CAPTCHA or identity check is visible. DocuBye does not bypass it; resolve manually.",
+                        "A CAPTCHA or identity check is visible. Zwip does not bypass it; resolve manually.",
                     )
 
                 if outcome is None and not _click_unique_visible_text(page, EXPECTED_CONTACT_STEPS[0]):
@@ -274,7 +274,7 @@ def inspect_google_dry_run(
                         outcome = _pause(
                             task,
                             "Human verification challenge visible",
-                            "A CAPTCHA or identity check appeared. DocuBye does not bypass it; resolve manually.",
+                            "A CAPTCHA or identity check appeared. Zwip does not bypass it; resolve manually.",
                         )
 
                 if outcome is None:
@@ -369,7 +369,7 @@ def main() -> None:
         "--live", action="store_true",
         help=f"Inspect the live Google form. Requires {REAL_SOURCE_ENV}=1. Read-only; never submits.",
     )
-    parser.add_argument("--store", default="docubye-tasks.sqlite3", help="SQLite task store path")
+    parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     parser.add_argument("--headed", action="store_true", help="Show the browser window")
     args = parser.parse_args()
 

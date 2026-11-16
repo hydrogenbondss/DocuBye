@@ -1,9 +1,9 @@
 import pytest
 
-from docubye.agent import MockRemovalAgent, recover_submission, resume_paused_task, validate_local_base_url
-from docubye.mock_site import running_mock_site
-from docubye.models import SyntheticProfile, TaskStatus
-from docubye.store import ApprovalState, TaskStore
+from zwip.agent import MockRemovalAgent, recover_submission, resume_paused_task, validate_local_base_url
+from zwip.mock_site import running_mock_site
+from zwip.models import SyntheticProfile, TaskStatus
+from zwip.store import ApprovalState, TaskStore
 
 pytest.importorskip("playwright")
 
@@ -172,7 +172,7 @@ def test_recovery_refuses_a_task_that_is_not_unknown(chromium, tmp_path):
 
 
 def test_recovery_without_a_persisted_submission_key_refuses_to_guess(tmp_path):
-    from docubye.models import TaskRecord
+    from zwip.models import TaskRecord
 
     store = TaskStore(tmp_path / "tasks.sqlite3")
     task = TaskRecord()

@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Rename note (2026-11):** the project was renamed from DocuBye to Zwip before the MCP interface milestone. Historical milestone entries below keep their original wording; command names shown reflect the current `zwip` CLI.
+
 This roadmap is deliberately evidence-gated. Do not skip ahead based on a successful demo alone.
 
 ## Milestone 0 — Product and safety foundation
@@ -17,7 +19,7 @@ This roadmap is deliberately evidence-gated. Do not skip ahead based on a succes
 
 ## Milestone 1 — Synthetic browser workflow
 
-**Status:** Ready for review — synthetic scope only. CI evidence is in the [Actions tab](https://github.com/hydrogenbondss/DocuBye/actions/workflows/tests.yml); nothing here demonstrates real-source removal.
+**Status:** Ready for review — synthetic scope only. CI evidence is in the [Actions tab](https://github.com/hydrogenbondss/Zwip/actions/workflows/tests.yml); nothing here demonstrates real-source removal.
 
 - [x] Create a local mock site that represents a typical opt-out form.
 - [x] Create a synthetic profile and a fixture with no real personal information.
@@ -70,9 +72,9 @@ _Amendment (first-source research branch): candidate selected — Google's offic
 _Amendment (Milestone 3 session 1): guided submission for the Google source — the agent prepares and tracks; the owner executes. Implemented as an explicit addition; the queue items below remain as scoped._
 
 - [x] Submission packet builder: ordered, section-grouped field→value checklist from an owner-approved gitignored profile; conditional sections only when selected.
-- [x] Guided walkthrough CLI (`docubye submit-google`): section-by-section prompts, typed confirmation gate, single-use approval consistent with Milestone 1.
+- [x] Guided walkthrough CLI (`zwip submit-google`): section-by-section prompts, typed confirmation gate, single-use approval consistent with Milestone 1.
 - [x] `submitted_by_owner` state, distinct from any agent-submitted state; reachable only via the guided gate.
-- [x] Outcome verification (`docubye verify`): evidence artifact required (gitignored captures/evidence/ only) before a task can be labelled removed.
+- [x] Outcome verification (`zwip verify`): evidence artifact required (gitignored captures/evidence/ only) before a task can be labelled removed.
 - [x] Resume-safe mid-walkthrough; redaction tests for events/store output.
 - [ ] Queue multiple supported tasks and preserve progress between sessions.
 - [ ] Resume paused tasks without resubmitting.
@@ -88,9 +90,9 @@ _Amendment (Milestone 3 session 1): guided submission for the Google source — 
 _Amendment (Milestone 4 session 1): guided data-broker integrations — the agent prepares and tracks; the owner executes. Removal automation does not exist anywhere in this project._
 
 - [x] Extract the guided-submission core (packet, walkthrough, typed gate, single-use approval, evidence-gated verify) into a source-agnostic module.
-- [x] First data-broker adapter: guided Spokeo opt-out (`docubye submit-spokeo`), owner-executed with owner-solved CAPTCHA; evidence-gated verification. Not yet tested against the live site; owner rehearsal pending.
-- [x] Second data-broker adapter: guided PeopleConnect Suppression Center flow (`docubye submit-peopleconnect`), owner-executed by design (PeopleConnect refuses authorized agents); suppression is documented as not deletion. Not yet tested against the live site; owner rehearsal pending.
-- [x] Third data-broker adapter: guided Whitepages suppression (`docubye submit-whitepages`) — the phone-verification flow shape, owner answers the automated call and enters the code personally. Not yet tested against the live site; owner rehearsal pending.
+- [x] First data-broker adapter: guided Spokeo opt-out (`zwip submit-spokeo`), owner-executed with owner-solved CAPTCHA; evidence-gated verification. Not yet tested against the live site; owner rehearsal pending.
+- [x] Second data-broker adapter: guided PeopleConnect Suppression Center flow (`zwip submit-peopleconnect`), owner-executed by design (PeopleConnect refuses authorized agents); suppression is documented as not deletion. Not yet tested against the live site; owner rehearsal pending.
+- [x] Third data-broker adapter: guided Whitepages suppression (`zwip submit-whitepages`) — the phone-verification flow shape, owner answers the automated call and enters the code personally. Not yet tested against the live site; owner rehearsal pending.
 - [ ] Add discovery sources incrementally, starting with user-provided URLs and narrowly scoped official/search sources.
 - [ ] Add scheduled rechecks where permitted and technically meaningful.
 - [ ] Separate removal at the original source from search-result delisting and cached copies.

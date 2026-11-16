@@ -9,13 +9,13 @@
 
 ## Live read-only validation harness (deprecated)
 
-`docubye-capture-google-fixtures` was a headed, human-driven capture tool. **Its live path is deprecated** (see the runs below); its fixture path remains in use for offline tests. Do not run it against the live site.
+`zwip-capture-google-fixtures` was a headed, human-driven capture tool. **Its live path is deprecated** (see the runs below); its fixture path remains in use for offline tests. Do not run it against the live site.
 
 ### Live runs, 14–15 November 2026 — automated capture attempted and abandoned
 
 Run #1 (14 Nov) failed closed: the live allowlist blocked `accounts.google.com`, so sign-in was impossible; zero data captured. Run #2 (15 Nov), with the two-phase guard: the guard blocked only telemetry/widgets and no auth traffic, yet sign-in hung indefinitely after email entry — the signature of Google stonewalling automation-controlled browser binaries (Chrome for Testing), including a real-Chrome persistent profile under automation control.
 
-**Decision:** automated live capture is abandoned. DocuBye's no-evasion principles mean we will not fight Google's automation detection. No browser automation approaches sign-in, ever. The `docubye-capture-google-fixtures` live path is **deprecated**; its fixture path remains in use for offline tests.
+**Decision:** automated live capture is abandoned. Zwip's no-evasion principles mean we will not fight Google's automation detection. No browser automation approaches sign-in, ever. The `zwip-capture-google-fixtures` live path is **deprecated**; its fixture path remains in use for offline tests.
 
 **The supported validation path is manual capture** (below): the owner does everything in their own everyday browser, and the tooling only reads locally saved HTML files.
 
@@ -48,7 +48,7 @@ No browser automation is involved. You do everything in your own everyday browse
 2. Walk the wizard steps manually, one step at a time. At each step, save the page: **File → Save As → "Webpage, HTML Only"** into a new local folder, naming files in order: `01-start.html`, `02-personal-info.html`, `03-contact-branch.html`, and so on.
 3. Run the offline report tool on that folder:
 
-   `docubye-google-report --html-dir <your-folder>`
+   `zwip-google-report --html-dir <your-folder>`
 
 4. For each file the tool prints a redaction summary (counts and types of removed items, never the values), asks whether to keep a sanitized copy (opt-in, saved to the gitignored `captures/` directory), and runs the selector validation offline.
 5. The tool prints a machine-readable JSON report: per-step selector found/missing/ambiguous, processed file names, and blocked asset-request count. It contains no page content and no personal values. Share only this report if you want the fixtures updated.
@@ -57,7 +57,7 @@ The tool never touches the network: all page requests are blocked, and the offli
 
 ## The real wizard structure (validated 15 November 2026)
 
-Validated from an owner-saved manual capture of the live form (`captures/manual/01-start.html`, processed offline by `docubye-google-report`; only the JSON report was used — never raw HTML):
+Validated from an owner-saved manual capture of the live form (`captures/manual/01-start.html`, processed offline by `zwip-google-report`; only the JSON report was used — never raw HTML):
 
 - The wizard is a **single dynamic page (SPA)**. There are no per-step URLs; sections expand in place as radio options are selected. Saving the page twice yields identical files unless sections were expanded first.
 - Structure: (a) reason radio list including "Content contains your personal information", plus country-of-residence dropdown; (b) info-type radio list (address/phone/email, bank account, credit card, government-ID document images, official records, login credentials, "Other personal information"); (c) a **conditional government-ID sub-section** (ID type radio, "Last four characters" field, issuing-country dropdown) that appears only for the ID option; (d) doxxing yes/no question; (e) contact email; (f) "Specific content URLs" textarea; (g) screenshots upload; (h) "Google Search results page URLs" textarea; (i) "Search terms" textarea.
@@ -66,12 +66,12 @@ Validated from an owner-saved manual capture of the live form (`captures/manual/
 
 ## What this integration does
 
-`docubye-google-dry-run` (module `src/docubye/sources/google.py`) navigates the documented Google personal-contact-information removal wizard in a real browser, collects visible field metadata (never input values), and produces a **dry-run plan** for human review. It then stops. Task state, history, and the plan are recorded in the local SQLite store.
+`zwip-google-dry-run` (module `src/zwip/sources/google.py`) navigates the documented Google personal-contact-information removal wizard in a real browser, collects visible field metadata (never input values), and produces a **dry-run plan** for human review. It then stops. Task state, history, and the plan are recorded in the local SQLite store.
 
 ## Workflow
 
-1. Open `https://support.google.com/websearch/contact/content_removal_form?hl=en` (live mode only with `DOCUBYE_REAL_SOURCE=1`; default and CI use recorded fixtures).
-2. Pause to `awaiting_user` if a sign-in wall, CAPTCHA, or identity check is visible. DocuBye does not automate or bypass these.
+1. Open `https://support.google.com/websearch/contact/content_removal_form?hl=en` (live mode only with `ZWIP_REAL_SOURCE=1`; default and CI use recorded fixtures).
+2. Pause to `awaiting_user` if a sign-in wall, CAPTCHA, or identity check is visible. Zwip does not automate or bypass these.
 3. Select "Content contains your personal information", then "Address, phone number, and/or e-mail address". If either control is missing or ambiguous, pause — no guessing.
 4. Verify every form destination and submit-control target matches the documented form path; pause on any mutation.
 5. Collect visible field metadata (names, labels, types, required flags — never values) and map fields through the deterministic planner.
@@ -85,10 +85,10 @@ The exposed contact value as shown on the page, content URL(s), Google Search re
 
 The agent prepares; the owner executes; the agent tracks honestly. There is no browser automation in this flow.
 
-1. **Inspect** (`docubye-google-dry-run`, fixtures) produces a dry-run plan and a `ready_for_review` task.
+1. **Inspect** (`zwip-google-dry-run`, fixtures) produces a dry-run plan and a `ready_for_review` task.
 2. **Profile** — the owner writes their values into a gitignored local file (e.g. `captures/profile.local.json`; a synthetic example lives at `tests/fixtures/google/owner_profile.example.json`). Never commit a real profile.
-3. **Submit** — `docubye submit-google <task-id> --profile <path>` builds the submission packet (ordered, section-grouped field→value checklist; conditional government-ID section only when that info type is selected), displays it in the terminal only — never written to disk, never logged — and walks the owner section by section. The owner executes the real wizard in their own browser. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once, consistent with Milestone 1 semantics. Killing the walkthrough mid-flow leaves the task resumable with the same approval; a changed profile requires a fresh review.
-4. **Verify** — `docubye verify <task-id> --evidence <path> --confirm` records a verification artifact (the file must live under gitignored `captures/evidence/`; only its name and SHA-256 are stored, plus any Google-side confirmation text redacted) and only then marks the task `removed`.
+3. **Submit** — `zwip submit-google <task-id> --profile <path>` builds the submission packet (ordered, section-grouped field→value checklist; conditional government-ID section only when that info type is selected), displays it in the terminal only — never written to disk, never logged — and walks the owner section by section. The owner executes the real wizard in their own browser. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once, consistent with Milestone 1 semantics. Killing the walkthrough mid-flow leaves the task resumable with the same approval; a changed profile requires a fresh review.
+4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` records a verification artifact (the file must live under gitignored `captures/evidence/`; only its name and SHA-256 are stored, plus any Google-side confirmation text redacted) and only then marks the task `removed`.
 
 Required data for a request: the exposed contact value, content URL(s), Google Search results URL(s), search terms, country of residence, contact email — plus the government-ID fields only for that branch. The three attestations (accuracy, authority, scope) remain human-only.
 
@@ -115,4 +115,4 @@ Evidence over promises: a task is never labelled removed from submission alone. 
 
 - No code path fills a field, clicks Submit, or sends a request body. The route guard blocks every POST/PUT/PATCH/DELETE, unapproved host, and WebSocket; the fixture server asserts it received zero POSTs.
 - Logging is redacted: no personal values, cookies, credentials, or request bodies in task events or reports.
-- Live navigation requires `DOCUBYE_REAL_SOURCE=1`; tests and CI never contact Google.
+- Live navigation requires `ZWIP_REAL_SOURCE=1`; tests and CI never contact Google.

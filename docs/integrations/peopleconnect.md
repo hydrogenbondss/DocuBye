@@ -8,14 +8,14 @@ One suppression covers Intelius, TruthFinder, Instant Checkmate, US Search, Zaba
 ## Workflow
 
 1. **Profile** — the owner writes contact email, legal name, and date of birth (YYYY-MM-DD) into a gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/peopleconnect/owner_profile.example.json`). Never commit a real profile. The date of birth is displayed in the terminal packet only and is never written to events, the store, logs, or recorded output.
-2. **Submit** — `docubye submit-peopleconnect <task-id> --profile <path>` walks the packet in the terminal:
+2. **Submit** — `zwip submit-peopleconnect <task-id> --profile <path>` walks the packet in the terminal:
    - *Before you start* — use an email alias if available; plan one sitting; the emailed sign-in link expires in ~15 minutes.
    - *Sign in* — https://suppression.peopleconnect.us/login, enter contact email, click the emailed link within ~15 minutes (check spam; expiry is normal — restart).
    - *Match your record* — enter legal name and DOB exactly as in public records; select the matching record.
    - *Suppress* — set the record's visibility / "Desired Behavior" dropdown to "Suppressed" and save. **Never delete the Suppression Center account afterwards** — deleting it erases the standing suppression instruction while the data pipeline keeps flowing.
    - *Keep in mind* — brand coverage, suppression ≠ deletion, up to 10 business days to propagate, re-check every 3–6 months.
 3. Recording happens only after the typed gate (`I SUBMITTED`); approval is consumed exactly once; a changed profile after approval requires a fresh review.
-4. **Verify** — `docubye verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
+4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` with an artifact under gitignored `captures/evidence/`.
 
 ## Required data
 

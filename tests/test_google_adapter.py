@@ -1,14 +1,14 @@
 import pytest
 
-from docubye.models import TaskRecord, TaskStatus
-from docubye.sources.google import (
+from zwip.models import TaskRecord, TaskStatus
+from zwip.sources.google import (
     DATA_CATEGORIES,
     FORM_PATH,
     REQUIRED_ATTESTATIONS,
     REQUIRED_ATTESTATIONS as ATTESTATIONS,
     inspect_google_dry_run,
 )
-from docubye.store import TaskStore
+from zwip.store import TaskStore
 
 pytest.importorskip("playwright")
 
@@ -106,8 +106,8 @@ def test_page_initiated_post_is_blocked_and_never_reaches_the_server(chromium):
 
 
 def test_live_mode_requires_explicit_opt_in(monkeypatch):
-    monkeypatch.delenv("DOCUBYE_REAL_SOURCE", raising=False)
-    with pytest.raises(RuntimeError, match="DOCUBYE_REAL_SOURCE"):
+    monkeypatch.delenv("ZWIP_REAL_SOURCE", raising=False)
+    with pytest.raises(RuntimeError, match="ZWIP_REAL_SOURCE"):
         inspect_google_dry_run(fixture_dir=None)
 
 

@@ -81,7 +81,7 @@ def run_guided_flow(
     if stored.approval_state is ApprovalState.CONSUMED:
         raise PermissionError(
             "This task's approval was already consumed. If the owner submitted, record the "
-            "outcome with `docubye verify`; otherwise the task needs a fresh review."
+            "outcome with `zwip verify`; otherwise the task needs a fresh review."
         )
     if task.status is TaskStatus.DISCOVERED and allow_discovered:
         task.transition(TaskStatus.READY_FOR_REVIEW, f"{source_name} packet prepared from owner profile")
@@ -126,7 +126,7 @@ def run_guided_flow(
     task.transition(TaskStatus.AWAITING_CONFIRMATION, "Awaiting the source's confirmation; not verified")
     store.save_task(task)
     out("\nRecorded: submitted_by_owner (the human clicked the button, not the agent).")
-    out("Next: when the source confirms, run `docubye verify <task-id> --evidence <path> --confirm`.")
+    out("Next: when the source confirms, run `zwip verify <task-id> --evidence <path> --confirm`.")
     return task
 
 
