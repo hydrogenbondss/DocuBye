@@ -11,7 +11,7 @@ Boundaries (shared by every source adapter):
 - Task events and store rows record statuses and redacted notes only.
 - SUBMITTED_BY_OWNER is recorded only after the typed gate ("I SUBMITTED")
   and a single-use approval consumption, consistent with Milestone 1.
-- REMOVED is recorded only via verification with an evidence artifact.
+- VERIFIED_REMOVED is recorded only via verification with an evidence artifact.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from typing import Callable
 from uuid import uuid4
 
 from .models import TaskRecord, TaskStatus
-from .sources.google_capture import sanitize_html
+from .sanitize import sanitize_html
 from .store import ApprovalState, TaskStore
 
 SUBMITTED_CONFIRMATION = "I SUBMITTED"
@@ -139,7 +139,7 @@ def verify_removal(
     confirm: bool,
     confirmation_note: str = "",
 ) -> TaskRecord:
-    """Record a verification artifact and transition the task to REMOVED.
+    """Record a verification artifact and transition the task to VERIFIED_REMOVED.
 
     The evidence file must live under captures/evidence/ (gitignored). Without
     a recorded artifact the task can never be labelled removed.
@@ -151,7 +151,7 @@ def verify_removal(
     if task.status is not TaskStatus.AWAITING_CONFIRMATION:
         raise ValueError(
             f"Verification requires an awaiting_confirmation task; this task is {task.status.value}. "
-            "A task is never labelled removed from submission alone."
+            "A task is never labelled verified_removed from submission alone."
         )
 
     path = Path(evidence_path)
@@ -166,8 +166,8 @@ def verify_removal(
     store.record_evidence(task_id, "verification", path.name, digest, note)
 
     if not store.evidence_for(task_id):
-        raise RuntimeError("Evidence artifact was not recorded; refusing to mark removed")
+        raise RuntimeError("Evidence artifact was not recorded; refusing to mark verified_removed")
 
-    task.transition(TaskStatus.REMOVED, "Removal verified by owner-provided evidence artifact")
+    task.transition(TaskStatus.VERIFIED_REMOVED, "Removal verified by owner-provided evidence artifact")
     store.save_task(task)
     return task

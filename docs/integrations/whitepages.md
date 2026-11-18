@@ -5,8 +5,8 @@
 
 ## Workflow
 
-1. **Discovery (owner, manual):** search whitepages.com for your name and city/state variants in your own browser; copy each matching profile URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/whitepages/owner_profile.example.json`). Never commit a real profile.
-2. **Submit** — `zwip submit-whitepages <task-id> --profile <path>` validates the profile (https listing URLs on whitepages.com/www.whitepages.com only; a phone number that can receive a live call is required — the standard flow cannot complete without one), then walks the packet:
+1. **Discovery (owner, manual):** search whitepages.com for your name and city/state variants in your own browser; copy each matching profile URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/whitepages/owner_profile.example.json`). Never commit a real profile. The task ID argument is optional on the broker submit commands: omitting it auto-creates a new task in the `discovered` state.
+2. **Submit** — `zwip submit-whitepages [task-id] --profile <path>` validates the profile (https listing URLs on whitepages.com/www.whitepages.com only; a phone number that can receive a live call is required — the standard flow cannot complete without one), then walks the packet:
    - *Find your listings* — search guidance (URLs come from the validated profile).
    - *Before you start* — the flow places a **live automated call** with a 4-digit code; have your phone next to you and finish one listing at a time. A secondary number (e.g. Google Voice) works if you prefer not to share your primary one.
    - *Opt out of each listing* — per listing URL: https://www.whitepages.com/suppression-requests → paste URL → "Remove Me" → pick a reason → enter the phone number → answer the call → enter the 4-digit code yourself.
@@ -21,7 +21,7 @@ Contact email, phone number (live-call capable), and at least one listing URL. O
 
 ## Verification method
 
-Whitepages **is publicly self-verifiable**: re-search the listing URL after ~72 hours. **"Removed" means exactly this: the listing URL no longer shows the profile on re-search — nothing more.** Suitable evidence: a screenshot of the empty re-search result taken after 72 hours, and/or the confirmation communication.
+Whitepages **is publicly self-verifiable**: re-search the listing URL after ~72 hours. **"verified_removed" means exactly this: the listing URL no longer shows the profile on re-search — nothing more.** Suitable evidence: a screenshot of the empty re-search result taken after 72 hours, and/or the confirmation communication.
 
 ## Failure states
 

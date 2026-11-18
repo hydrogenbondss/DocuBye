@@ -88,13 +88,13 @@ The agent prepares; the owner executes; the agent tracks honestly. There is no b
 1. **Inspect** (`zwip-google-dry-run`, fixtures) produces a dry-run plan and a `ready_for_review` task.
 2. **Profile** — the owner writes their values into a gitignored local file (e.g. `captures/profile.local.json`; a synthetic example lives at `tests/fixtures/google/owner_profile.example.json`). Never commit a real profile.
 3. **Submit** — `zwip submit-google <task-id> --profile <path>` builds the submission packet (ordered, section-grouped field→value checklist; conditional government-ID section only when that info type is selected), displays it in the terminal only — never written to disk, never logged — and walks the owner section by section. The owner executes the real wizard in their own browser. Recording happens only after the typed gate (`I SUBMITTED`); the approval is consumed exactly once, consistent with Milestone 1 semantics. Killing the walkthrough mid-flow leaves the task resumable with the same approval; a changed profile requires a fresh review.
-4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` records a verification artifact (the file must live under gitignored `captures/evidence/`; only its name and SHA-256 are stored, plus any Google-side confirmation text redacted) and only then marks the task `removed`.
+4. **Verify** — `zwip verify <task-id> --evidence <path> --confirm` records a verification artifact (the file must live under gitignored `captures/evidence/`; only its name and SHA-256 are stored, plus any Google-side confirmation text redacted) and only then marks the task `verified_removed`.
 
 Required data for a request: the exposed contact value, content URL(s), Google Search results URL(s), search terms, country of residence, contact email — plus the government-ID fields only for that branch. The three attestations (accuracy, authority, scope) remain human-only.
 
 ## Verification method
 
-Evidence over promises: a task is never labelled removed from submission alone. `submitted_by_owner` records that the owner clicked the button (distinct from any agent-submitted state); `removed` is reachable only via the verify command with a recorded evidence artifact under `captures/evidence/`.
+Evidence over promises: a task is never labelled removed from submission alone. `submitted_by_owner` records that the owner clicked the button (distinct from any agent-submitted state); `verified_removed` is reachable only via the verify command with a recorded evidence artifact under `captures/evidence/`.
 
 ## Failure states
 

@@ -185,7 +185,7 @@ def test_submission_requires_ready_for_review(tmp_path):
         )
 
 
-def test_removed_requires_evidence_artifact_and_confirm(tmp_path):
+def test_verified_removed_requires_evidence_artifact_and_confirm(tmp_path):
     store = TaskStore(tmp_path / "tasks.sqlite3")
     task = _ready_task(store)
     profile = _profile_in_captures(tmp_path)
@@ -213,7 +213,7 @@ def test_removed_requires_evidence_artifact_and_confirm(tmp_path):
         store, task.task_id, evidence, confirm=True,
         google_confirmation="Ref G-12345 for alex.example@example.test",
     )
-    assert result.status is TaskStatus.REMOVED
+    assert result.status is TaskStatus.VERIFIED_REMOVED
     artifacts = store.evidence_for(task.task_id)
     assert len(artifacts) == 1
     assert artifacts[0]["reference"] == "google-response.txt"
@@ -244,6 +244,6 @@ def test_state_machine_guards_guided_states():
     with pytest.raises(ValueError, match="Invalid task transition"):
         task.transition(TaskStatus.SUBMITTING, "owner-submitted tasks never enter the agent path")
     task.transition(TaskStatus.AWAITING_CONFIRMATION, "awaiting decision")
-    task.transition(TaskStatus.REMOVED, "evidence recorded")
+    task.transition(TaskStatus.VERIFIED_REMOVED, "evidence recorded")
     with pytest.raises(ValueError, match="Invalid task transition"):
-        task.transition(TaskStatus.DISCOVERED, "removed is terminal")
+        task.transition(TaskStatus.DISCOVERED, "verified_removed is terminal")

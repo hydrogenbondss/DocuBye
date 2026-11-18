@@ -74,7 +74,7 @@ _Amendment (Milestone 3 session 1): guided submission for the Google source — 
 - [x] Submission packet builder: ordered, section-grouped field→value checklist from an owner-approved gitignored profile; conditional sections only when selected.
 - [x] Guided walkthrough CLI (`zwip submit-google`): section-by-section prompts, typed confirmation gate, single-use approval consistent with Milestone 1.
 - [x] `submitted_by_owner` state, distinct from any agent-submitted state; reachable only via the guided gate.
-- [x] Outcome verification (`zwip verify`): evidence artifact required (gitignored captures/evidence/ only) before a task can be labelled removed.
+- [x] Outcome verification (`zwip verify`): evidence artifact required (gitignored captures/evidence/ only) before a task can be labelled verified_removed.
 - [x] Resume-safe mid-walkthrough; redaction tests for events/store output.
 - [ ] Queue multiple supported tasks and preserve progress between sessions.
 - [ ] Resume paused tasks without resubmitting.
@@ -92,6 +92,7 @@ _Amendment (Milestone 4 session 1): guided data-broker integrations — the agen
 - [x] Extract the guided-submission core (packet, walkthrough, typed gate, single-use approval, evidence-gated verify) into a source-agnostic module.
 - [x] First data-broker adapter: guided Spokeo opt-out (`zwip submit-spokeo`), owner-executed with owner-solved CAPTCHA; evidence-gated verification. Not yet tested against the live site; owner rehearsal pending.
 - [x] Second data-broker adapter: guided PeopleConnect Suppression Center flow (`zwip submit-peopleconnect`), owner-executed by design (PeopleConnect refuses authorized agents); suppression is documented as not deletion. Not yet tested against the live site; owner rehearsal pending.
+- [x] Broker task creation is first-class: the task ID is optional on broker submit commands and omitting it auto-creates a `discovered` task.
 - [x] Third data-broker adapter: guided Whitepages suppression (`zwip submit-whitepages`) — the phone-verification flow shape, owner answers the automated call and enters the code personally. Not yet tested against the live site; owner rehearsal pending.
 - [ ] Add discovery sources incrementally, starting with user-provided URLs and narrowly scoped official/search sources.
 - [ ] Add scheduled rechecks where permitted and technically meaningful.

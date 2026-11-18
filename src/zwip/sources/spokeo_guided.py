@@ -100,7 +100,7 @@ def build_packet(profile: SpokeoProfile) -> tuple[PacketSection, ...]:
             (f"Listing {index}", (
                 f"1. Go to {OPT_OUT_URL}\n"
                 f"    2. Paste: {url}\n"
-                f"    3. Enter your contact email\n"
+                f"    3. Enter your contact email: {profile.contact_email}\n"
                 "    4. Solve the CAPTCHA yourself — this tool never solves CAPTCHAs\n"
                 "    5. Submit the form yourself"
             ))

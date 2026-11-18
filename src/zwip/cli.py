@@ -103,7 +103,7 @@ def _verify(args: argparse.Namespace) -> None:
     try:
         task = verify_removal(
             store, args.task_id, args.evidence,
-            confirm=args.confirm, confirmation_note=args.google_confirmation,
+            confirm=args.confirm, confirmation_note=args.confirmation_note,
         )
         print(json.dumps(task.to_public_dict(), indent=2))
     finally:
@@ -222,7 +222,7 @@ def main() -> None:
 
     verify_parser = subparsers.add_parser(
         "verify",
-        help="Record a verification artifact and mark the task removed (evidence required)",
+        help="Record a verification artifact and mark the task verified_removed (evidence required)",
     )
     verify_parser.add_argument("task_id")
     verify_parser.add_argument(
@@ -231,8 +231,9 @@ def main() -> None:
     )
     verify_parser.add_argument("--confirm", action="store_true", help="Required explicit confirmation")
     verify_parser.add_argument(
-        "--google-confirmation", default="",
-        help="Optional Google-side confirmation text (recorded redacted)",
+        "--confirmation-note", "--google-confirmation", dest="confirmation_note", default="",
+        help="Optional source-side confirmation text (recorded redacted); "
+        "--google-confirmation is kept as a backwards-compatible alias",
     )
     verify_parser.add_argument("--store", default="zwip-tasks.sqlite3", help="SQLite task store path")
     verify_parser.set_defaults(handler=_verify)

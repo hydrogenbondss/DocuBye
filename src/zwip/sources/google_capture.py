@@ -16,12 +16,12 @@ import argparse
 import difflib
 import json
 import os
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 from urllib.parse import urlsplit
 
+from ..sanitize import sanitize_html
 from ..google_inspect import (
     EXPECTED_CONTACT_STEPS,
     _click_unique_visible_text,
@@ -131,50 +131,6 @@ def _prompt_until_empty(prompt_fn: Callable[[str], str], message: str) -> None:
     answer = prompt_fn(message)
     while answer.strip():
         answer = prompt_fn("No input expected here — press Enter alone when ready: ")
-
-# --- Sanitization ------------------------------------------------------------
-
-_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
-_PHONE_RE = re.compile(r"\+\d[\d\s().-]{7,}\d")
-_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
-_TOKEN_PARAM_RE = re.compile(
-    r"(?i)\b(sid|ssid|hsid|apisid|sapisid|token|sig|signature|session|sessionid|"
-    r"state|code|authuser|access_token|id_token|nonce|key)=([^\s&\"'<>)]+)"
-)
-_ACCOUNT_LABEL_RE = re.compile(r'(?i)(aria-label="[^"]*(?:google account|account)[^"]*")')
-_AVATAR_RE = re.compile(r"<img\b[^>]*(?:googleusercontent|avatar|profile)[^>]*>", re.IGNORECASE)
-_ACCOUNT_NAME_RE = re.compile(
-    r'(?i)(<(?:div|span|a|button)[^>]*(?:aria-label="[^"]*google account[^"]*"|'
-    r'data-ogpc|gb_[a-z])[^>]*>)(.*?)(</(?:div|span|a|button)>)',
-    re.DOTALL,
-)
-
-
-def sanitize_html(html: str) -> tuple[str, list[str]]:
-    """Best-effort redaction of personal data from a captured page.
-
-    Returns the sanitized HTML and the list of redaction kinds applied. This is
-    a privacy screen, not a parser: the redaction diff is always shown to the
-    operator before saving, and captures stay in a gitignored directory.
-    """
-    applied: list[str] = []
-
-    def _sub(pattern, replacement, kind, text):
-        new_text, count = pattern.subn(replacement, text)
-        if count:
-            applied.append(f"{kind} ({count})")
-        return new_text
-
-    out = html
-    out = _sub(_EMAIL_RE, "[redacted-email]", "emails", out)
-    out = _sub(_PHONE_RE, "[redacted-phone]", "phone numbers", out)
-    out = _sub(_DATE_RE, "[redacted-date]", "dates of birth", out)
-    out = _sub(_TOKEN_PARAM_RE, r"\1=[redacted-param]", "URL/session parameters", out)
-    out = _sub(_ACCOUNT_LABEL_RE, 'aria-label="[redacted-account-label]"', "account labels", out)
-    out = _sub(_AVATAR_RE, "<!-- [redacted-avatar] -->", "avatar images", out)
-    out = _sub(_ACCOUNT_NAME_RE, r"\1[redacted-account-name]\3", "account name areas", out)
-    return out, applied
-
 
 def redaction_diff(original: str, sanitized: str, context: int = 1) -> str:
     """Unified diff limited to changed hunks, for operator review before saving."""

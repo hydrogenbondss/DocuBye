@@ -51,6 +51,8 @@ def test_packet_structure_and_per_url_iteration(tmp_path):
     assert "https://www.spokeo.com/Example-Person/California-Synthetic" in opt_out["Listing 1"]
     assert "https://www.spokeo.com/Example-Person/New-York-Synthetic" in opt_out["Listing 2"]
     assert "CAPTCHA yourself" in opt_out["Listing 1"]
+    # The packet shows the exact value to enter (same contract as Whitepages).
+    assert "alex.example@example.test" in opt_out["Listing 1"]
     confirm = dict(packet[2].entries)
     assert "NOT processed" in confirm["Verification link"]
     assert "quarterly" in dict(packet[3].entries)["Reappearance"]
@@ -89,6 +91,7 @@ def test_discovered_task_reaches_owner_submitted_via_gate(tmp_path):
 
     # No profile values anywhere outside the terminal display.
     assert any("Example-Person/California-Synthetic" in line for line in out_lines)
+    assert any("alex.example@example.test" in line for line in out_lines)
     blob = json.dumps(result.to_public_dict()) + json.dumps(store.evidence_for(task.task_id))
     assert "alex.example@example.test" not in blob
     assert "Example-Person" not in blob
@@ -160,6 +163,6 @@ def test_verify_gates_apply_to_spokeo_tasks(tmp_path):
         store, task.task_id, evidence, confirm=True,
         confirmation_note="Confirmation email for alex.example@example.test received",
     )
-    assert result.status is TaskStatus.REMOVED
+    assert result.status is TaskStatus.VERIFIED_REMOVED
     blob = json.dumps(result.to_public_dict()) + json.dumps(store.evidence_for(task.task_id))
     assert "alex.example@example.test" not in blob
