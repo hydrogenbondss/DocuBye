@@ -21,7 +21,6 @@ class TaskStatus(StrEnum):
     SUBMITTED_BY_OWNER = "submitted_by_owner"
     AWAITING_CONFIRMATION = "awaiting_confirmation"
     VERIFIED_REMOVED = "verified_removed"
-    REMOVED = "removed"
     REJECTED = "rejected"
     FAILED = "failed"
     UNKNOWN = "unknown"
@@ -43,11 +42,10 @@ _ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.SUBMITTED: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     # The owner clicked the button in their own browser; the agent only recorded it.
     TaskStatus.SUBMITTED_BY_OWNER: {TaskStatus.AWAITING_CONFIRMATION, TaskStatus.FAILED},
-    # REMOVED is reachable only via the verify command with a recorded evidence
-    # artifact; never from submission alone.
-    TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
+    # VERIFIED_REMOVED is reachable only via the verify command with a recorded
+    # evidence artifact; never from submission alone.
+    TaskStatus.AWAITING_CONFIRMATION: {TaskStatus.VERIFIED_REMOVED, TaskStatus.UNKNOWN, TaskStatus.FAILED},
     TaskStatus.VERIFIED_REMOVED: set(),
-    TaskStatus.REMOVED: set(),
     TaskStatus.REJECTED: set(),
     TaskStatus.FAILED: set(),
     # UNKNOWN may only return to AWAITING_CONFIRMATION, and only through the

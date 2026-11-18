@@ -7,7 +7,7 @@ One suppression covers Intelius, TruthFinder, Instant Checkmate, US Search, Zaba
 
 ## Workflow
 
-1. **Profile** — the owner writes contact email, legal name, and date of birth (YYYY-MM-DD) into a gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/peopleconnect/owner_profile.example.json`). Never commit a real profile. The date of birth is displayed in the terminal packet only and is never written to events, the store, logs, or recorded output.
+1. **Profile** — the owner writes contact email, legal name, and date of birth (YYYY-MM-DD) into a gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/peopleconnect/owner_profile.example.json`). Never commit a real profile. The task ID argument is optional on the broker submit commands: omitting it auto-creates a new task in the `discovered` state. The date of birth is displayed in the terminal packet only and is never written to events, the store, logs, or recorded output.
 2. **Submit** — `zwip submit-peopleconnect <task-id> --profile <path>` walks the packet in the terminal:
    - *Before you start* — use an email alias if available; plan one sitting; the emailed sign-in link expires in ~15 minutes.
    - *Sign in* — https://suppression.peopleconnect.us/login, enter contact email, click the emailed link within ~15 minutes (check spam; expiry is normal — restart).

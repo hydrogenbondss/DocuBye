@@ -187,7 +187,7 @@ def test_verify_gates_and_dob_absence_in_evidence(tmp_path):
         store, task.task_id, evidence, confirm=True,
         confirmation_note=f"Portal shows Suppressed for Alex Example, DOB {DOB}, alex.example@example.test",
     )
-    assert result.status is TaskStatus.REMOVED
+    assert result.status is TaskStatus.VERIFIED_REMOVED
     blob = json.dumps(result.to_public_dict()) + json.dumps(store.evidence_for(task.task_id))
     assert DOB not in blob
     assert "alex.example@example.test" not in blob

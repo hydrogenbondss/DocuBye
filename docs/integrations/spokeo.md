@@ -5,8 +5,8 @@
 
 ## Workflow
 
-1. **Discovery (owner, manual):** search spokeo.com for your name variants (and city/state) in your own browser; copy each matching listing URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/spokeo/owner_profile.example.json`). Never commit a real profile.
-2. **Submit** — `zwip submit-spokeo <task-id> --profile <path>` validates the profile (every listing URL must be an `https://` URL on `spokeo.com` or `www.spokeo.com`; an empty listing list is rejected with instructions to run discovery first), then walks you through the packet in the terminal:
+1. **Discovery (owner, manual):** search spokeo.com for your name variants (and city/state) in your own browser; copy each matching listing URL into your gitignored profile file (e.g. `captures/profile.local.json`; synthetic example at `tests/fixtures/spokeo/owner_profile.example.json`). Never commit a real profile. The task ID argument is optional on the broker submit commands: omitting it auto-creates a new task in the `discovered` state.
+2. **Submit** — `zwip submit-spokeo [task-id] --profile <path>` validates the profile (every listing URL must be an `https://` URL on `spokeo.com` or `www.spokeo.com`; an empty listing list is rejected with instructions to run discovery first), then walks you through the packet in the terminal:
    - *Find your listings* — search guidance using your name/city/state variants (the actionable URLs come from the validated profile).
    - *Opt out of each listing* — for each listing URL, in order: go to https://www.spokeo.com/optout, paste the listing URL, enter your contact email, solve the CAPTCHA yourself, submit.
    - *Confirm by email* — Spokeo emails a verification link per request; the request is **not processed until you click that link**. Check spam/junk.
@@ -20,7 +20,7 @@ Contact email (used at opt-out and for the verification email) and at least one 
 
 ## Verification method
 
-Self-verifiable via public re-search: after Spokeo's processing window (about 72 hours), search for the listing URL again. **"Removed" means exactly this: the listing URL no longer shows the profile on re-check — nothing more.** Suitable evidence artifacts: a screenshot of the confirmation email and/or a screenshot of the empty re-search result taken after 72 hours, saved under `captures/evidence/`.
+Self-verifiable via public re-search: after Spokeo's processing window (about 72 hours), search for the listing URL again. **"verified_removed" means exactly this: the listing URL no longer shows the profile on re-check — nothing more.** Suitable evidence artifacts: a screenshot of the confirmation email and/or a screenshot of the empty re-search result taken after 72 hours, saved under `captures/evidence/`.
 
 ## Failure states
 

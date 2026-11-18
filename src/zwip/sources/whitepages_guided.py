@@ -6,7 +6,7 @@ own phone. Zwip never solves CAPTCHAs and never enters the 4-digit code —
 it structures the work as a checklist and records only statuses and redacted
 notes.
 
-Whitepages is publicly self-verifiable: "removed" means exactly that the
+Whitepages is publicly self-verifiable: "verified_removed" means exactly that the
 listing URL no longer shows the profile on re-search after ~72 hours.
 """
 
