@@ -158,7 +158,7 @@ def run_guided_submission(
     task_id: str,
     profile_path: str | Path,
     *,
-    prompt_fn: Callable[[str], str] = input,
+    prompt_fn: Callable[[str], str] | None = None,
     out: Callable[[str], None] = print,
 ) -> TaskRecord:
     """Build the Google packet from the owner profile and run the guided flow."""

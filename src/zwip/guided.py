@@ -65,7 +65,7 @@ def run_guided_flow(
     *,
     source_name: str,
     allow_discovered: bool = False,
-    prompt_fn: Callable[[str], str] = input,
+    prompt_fn: Callable[[str], str] | None = None,
     out: Callable[[str], None] = print,
 ) -> TaskRecord:
     """Walk the owner through the packet, then record SUBMITTED_BY_OWNER.
@@ -102,6 +102,7 @@ def run_guided_flow(
             "the task needs a fresh review."
         )
 
+    prompt_fn = prompt_fn or input
     out(f"\nGuided submission ({source_name}) — you drive the browser; this tool only guides.")
     out("Open the source in YOUR browser and walk each section as shown.")
     for index, section in enumerate(packet, start=1):
