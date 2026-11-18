@@ -9,7 +9,7 @@ import sys
 from .agent import MockRemovalAgent, ReviewSummary, recover_submission, resume_paused_task
 from .mock_site import running_mock_site
 from .guided import verify_removal
-from .models import SyntheticProfile
+from .models import SyntheticProfile, TaskRecord
 from .planner import RuleBasedPlanner
 from .sources.google_guided import run_guided_submission
 from .sources.peopleconnect_guided import run_peopleconnect_submission
@@ -110,10 +110,32 @@ def _verify(args: argparse.Namespace) -> None:
         store.close()
 
 
+def _broker_task_id(store: TaskStore, task_id: str | None) -> str:
+    """Return an existing task's ID, or create a fresh DISCOVERED task.
+
+    Broker flows have no inspection step, so no earlier command creates the
+    task. New tasks start DISCOVERED and advance only through the existing
+    guided-flow path (allow_discovered) — no shortcuts around review.
+    """
+    if task_id:
+        try:
+            store.load_task(task_id)
+            return task_id
+        except KeyError:
+            pass
+    task = TaskRecord()
+    store.save_task(task)
+    if task_id:
+        print(f"No task '{task_id}' found; created new task {task.task_id} (discovered).")
+    else:
+        print(f"Created new task {task.task_id} (discovered).")
+    return task.task_id
+
+
 def _submit_spokeo(args: argparse.Namespace) -> None:
     store = TaskStore(args.store)
     try:
-        task = run_spokeo_submission(store, args.task_id, args.profile)
+        task = run_spokeo_submission(store, _broker_task_id(store, args.task_id), args.profile)
         print(json.dumps(task.to_public_dict(), indent=2))
     finally:
         store.close()
@@ -122,7 +144,7 @@ def _submit_spokeo(args: argparse.Namespace) -> None:
 def _submit_peopleconnect(args: argparse.Namespace) -> None:
     store = TaskStore(args.store)
     try:
-        task = run_peopleconnect_submission(store, args.task_id, args.profile)
+        task = run_peopleconnect_submission(store, _broker_task_id(store, args.task_id), args.profile)
         print(json.dumps(task.to_public_dict(), indent=2))
     finally:
         store.close()
@@ -131,7 +153,7 @@ def _submit_peopleconnect(args: argparse.Namespace) -> None:
 def _submit_whitepages(args: argparse.Namespace) -> None:
     store = TaskStore(args.store)
     try:
-        task = run_whitepages_submission(store, args.task_id, args.profile)
+        task = run_whitepages_submission(store, _broker_task_id(store, args.task_id), args.profile)
         print(json.dumps(task.to_public_dict(), indent=2))
     finally:
         store.close()
@@ -219,7 +241,7 @@ def main() -> None:
         "submit-spokeo",
         help="Guided Spokeo opt-out: you execute each opt-out in your browser; the tool guides and records",
     )
-    spokeo_parser.add_argument("task_id")
+    spokeo_parser.add_argument("task_id", nargs="?", help="Existing task ID; omit to create a new task")
     spokeo_parser.add_argument(
         "--profile", required=True,
         help="Owner-approved Spokeo profile JSON (must live under gitignored captures/)",
@@ -231,7 +253,7 @@ def main() -> None:
         "submit-peopleconnect",
         help="Guided PeopleConnect Suppression Center flow; you execute it in your browser",
     )
-    peopleconnect_parser.add_argument("task_id")
+    peopleconnect_parser.add_argument("task_id", nargs="?", help="Existing task ID; omit to create a new task")
     peopleconnect_parser.add_argument(
         "--profile", required=True,
         help="Owner-approved PeopleConnect profile JSON (must live under gitignored captures/)",
@@ -243,7 +265,7 @@ def main() -> None:
         "submit-whitepages",
         help="Guided Whitepages suppression (phone-verification flow); you execute it in your browser",
     )
-    whitepages_parser.add_argument("task_id")
+    whitepages_parser.add_argument("task_id", nargs="?", help="Existing task ID; omit to create a new task")
     whitepages_parser.add_argument(
         "--profile", required=True,
         help="Owner-approved Whitepages profile JSON (must live under gitignored captures/)",
